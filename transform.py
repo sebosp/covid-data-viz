@@ -46,7 +46,7 @@ def parse_data_line(data_array, date_keys, offset_dates=4):
     current_column_date = date_keys[date_idx]
     # logger.debug("Found data %s for day: %s", date_item, current_column_date)
     # Not really GPS, just lat,lon
-    res[current_column_date] = date_item
+    res[current_column_date] = int(date_item)
   return (gps_key, res)
 
 def parse_csv_file(fname):
@@ -121,7 +121,7 @@ def generate_globe_json_string(gps_scaled_records, pretty_print=True):
   daily_series = set(daily_series)
   logger.debug("Daily series identified: %s", daily_series)
   # Now let's push the scaled data:
-  for series in daily_series:
+  for series in sorted(daily_series):
     logger.debug("Starting filling series %s", series)
     day_array = []
     for lat_lon_idx, lat_lon_data in gps_scaled_records.items():
@@ -167,12 +167,20 @@ def print_current_info_div(gps_scaled_records):
 def main():
   logging.basicConfig(level=logging.INFO)
   confirmed_gps_data = parse_csv_file("../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
+  logging.info("Writing data/confirmed-raw.json")
+  with open("data/confirmed-raw.json", "w") as file_handle:
+    file_handle.write(generate_globe_json_string(confirmed_gps_data))
+  logging.info("Finished writing data/confirmed-raw.json")
   scaled_confirmed_data = scale_daily_values(confirmed_gps_data)
   logging.info("Writing data/confirmed.json")
   with open("data/confirmed.json", "w") as file_handle:
     file_handle.write(generate_globe_json_string(scaled_confirmed_data))
   logging.info("Finished writing data/confirmed.json")
   deaths_gps_data = parse_csv_file("../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
+  logging.info("Writing data/deaths-raw.json")
+  with open("data/deaths-raw.json", "w") as file_handle:
+    file_handle.write(generate_globe_json_string(deaths_gps_data))
+  logging.info("Finished writing data/deaths-raw.json")
   scaled_deaths_data = scale_daily_values(deaths_gps_data)
   logging.info("Writing data/deaths.json")
   with open("data/deaths.json", "w") as file_handle:

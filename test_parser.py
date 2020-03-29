@@ -22,10 +22,10 @@ class TestParsing(unittest.TestCase):
     self.assertEqual(gps_key, "0,80")
     first_day_record = parsed_daily_data.get("20-01-22")
     self.assertIsNotNone(first_day_record)
-    self.assertEqual(first_day_record, "1")
+    self.assertEqual(first_day_record, 1)
     second_day_record = parsed_daily_data.get("20-01-01")
     self.assertIsNotNone(second_day_record)
-    self.assertEqual(second_day_record, "5")
+    self.assertEqual(second_day_record, 5)
     # Return a dict for future re-use
     test_data = dict()
     test_data[gps_key] = parsed_daily_data
@@ -49,7 +49,7 @@ class TestParsing(unittest.TestCase):
     test_data = self.test_parse_data()
     scaled_data = transform.scale_daily_values(test_data)
     globe_json = transform.generate_globe_json_string(scaled_data, pretty_print=False)
-    self.assertEqual(globe_json, '[["20-01-22", [0.0, 80.0, 0.2]], ["20-01-01", [0.0, 80.0, 1.0]]]')
+    self.assertEqual(globe_json, '[["20-01-01", [0.0, 80.0, 1.0]], ["20-01-22", [0.0, 80.0, 0.2]]]')
 
 if __name__ == '__main__':
   unittest.main()
