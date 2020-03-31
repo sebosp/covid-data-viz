@@ -27,7 +27,7 @@ def parse_header(header_array, offset_dates=4):
     day = day.rjust(2, '0')
     month = month.rjust(2, '0')
     new_date_key = "{}-{}-{}".format(year, month, day)
-    # logger.debug("New date %s makes key: %s", date_item, new_date_key)
+    logger.debug("New date %s makes key: %s", date_item, new_date_key)
     date_keys.append(new_date_key)
   logger.info("Found date_keys: %s", date_keys)
   return date_keys
@@ -44,7 +44,7 @@ def parse_data_line(data_array, date_keys, offset_dates=4):
   gps_key = "{},{}".format(lat,lon)
   for date_idx, date_item in enumerate(data_array[offset_dates:]):
     current_column_date = date_keys[date_idx]
-    # logger.debug("Found data %s for day: %s", date_item, current_column_date)
+    logger.debug("Found data %s for day: %s", date_item, current_column_date)
     # Not really GPS, just lat,lon
     res[current_column_date] = { "absolute": int(date_item)}
   return (gps_key, res)
@@ -77,8 +77,8 @@ def find_max_value(gps_records):
   """
   logger = logging.getLogger("find_max_value")
   max = 0
-  for gps_location, gps_data in gps_records.items():
-    for day_dx, day_data in gps_data.items():
+  for _, gps_data in gps_records.items():
+    for _, day_data in gps_data.items():
       day_value_int = int(day_data["absolute"])
       if max < day_value_int:
         max = day_value_int
@@ -149,8 +149,8 @@ def print_current_info_div(gps_scaled_records, daily_series):
   Iterates over the parsed and scaled records to find the unique series and print <spans> to populate the dropdown
   """
   js_day_array = []
-  for lat_lon_idx, lat_lon_data in gps_scaled_records.items():
-    for day_idx, day_data in lat_lon_data.items():
+  for _, lat_lon_data in gps_scaled_records.items():
+    for day_idx, _ in lat_lon_data.items():
       daily_series.append(day_idx)
   # Let's make the series unique
   daily_series = set(daily_series)
