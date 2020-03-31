@@ -73,6 +73,7 @@ if (!Detector.webgl) {
     "20-03-27",
     "20-03-28",
     "20-03-29",
+    "20-03-30",
   ];
   var container = document.getElementById("container");
   //Disabling old automatic colour choosing system
