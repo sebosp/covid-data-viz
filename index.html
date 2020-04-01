@@ -2,224 +2,54 @@
 <html lang="en">
   <head>
     <title>COVID-19 virus spread</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="third-party/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
     <!-- Modified from https://www.adaptivemobile.com/spamglobe/ -->
     <meta name="description" content="Using webgl to map the spread of covid-19" />
     <meta charset="utf-8">
     <style type="text/css">
-      html {
-        height: 100%;
-      }
       body {
-        margin: 0;
-        padding: 0;
         background: #000000 url(images/loading.gif) center center no-repeat;
         color: #ffffff;
-        font-family: sans-serif;
-        font-size: 13px;
-        line-height: 20px;
-        height: 100%;
       }
-
-      #info {
-        font-size: 11px;
-        position: absolute;
-        bottom: 5px;
-        background-color: rgba(0,0,0,0.8);
-        border-radius: 3px;
-        right: 10px;
-        padding: 10px;
-
-      }
-
-      #currentInfo {
-        width: 270px;
-        position: absolute;
-        left: 20px;
-        top: 140px;
-        padding: 10px;
-      }
-	  
-	 #dataSelectDropdown {
-        width: 350px;
-        position: absolute;
-        left: 20px;
-        top: 85px;
-        border-top: 1px solid rgba(255,255,255,0.4);
-		border-bottom: 1px solid rgba(255,255,255,0.4);
-        padding: 10px;
-      }
-
-      a {
-        color: #aaa;
-        text-decoration: none;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
-
-      .bull {
-        padding: 0 5px;
-        color: #555;
-      }
-
-      #title {
-        position: absolute;
-        top: 20px;
-        width: 380px;
-        left: 20px;
-        background-color: rgba(0,0,0,0.2);
-        border-radius: 3px;
-        font: 20px Georgia;
-        padding: 10px;
-      }
-
-      .day {
-        font: 11px Verdana, Geneva, sans-serif;
-        line-height: 30px;
-        height: 30px;
-        text-align: left;
-        float: left;
-        width: 150px;
-        color: rgba(255, 255, 255, 0.4);
-        cursor: pointer;
-        -webkit-transition: all 0.1s ease-out;
-      }
-
-      .day:hover, .day.active {
-        font-size: 13px;
-        color: #fff;
-      }
-	  
-	  #dataSelection option {
-		  background: #e0e0e0;
-	  }
-
-	  
-	  select {
-		  background: #e0e0e0;
-		  border: 1px #CCCCCC;
-		  color: #000;
-		  line-height:25px;
-		  width:220px;
-	  }
 
     </style>
+  <script src="third-party/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+  <script src="third-party/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="third-party/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
   </head>
   <body>
   
-  <div id="title">
-    <div id="current-day"></div>
-  </div>
+    <div class="container-sm">
+      <div id="confirmed-total" class="alert alert-warning" role="alert">Confirmed</div>
+    </div>
+    <div class="container-sm">
+      <div id="deaths-total" class="alert alert-danger" role="alert">Deaths</div>
+    </div>
+    <div class="container-sm">
+      <div id="recoreved-total" class="alert alert-success" role="alert">Recoreved</div>
+    </div>
+    <button type="button" class="btn btn-primary" data-toggle="button" aria-pressed="false">
+        Single toggle
+    </button>
 
-  <div id="container"></div>
+  <div id="globe-container"></div>
 
   <div id="info">
     <strong><a href="http://www.chromeexperiments.com/globe">Uses Google WebGL Globe</a></strong>
-<span class="bull">&bull;</span> Theme/Selection taken from <a href="https://www.adaptivemobile.com/spamglobe/"></a>
   </div>
 
- <div id="dataSelectDropdown">
-  	<script type="text/javascript">
-	 	function updateGlobeData(){
-			var theSelection = document.getElementById("dataSelection").selectedIndex;
-			
-				
-			if (theSelection == 0){
-				
-				loadData('data/confirmed.json');
-			}else{
-				
-				loadData('data/deaths.json');
-			}
-		}
-	 </script>
- 
-	<select name="dataSelection" id="dataSelection" onchange="updateGlobeData()">
+  <div id="dataSelectDropdown">
+  <select name="dataSelection" id="dataSelection" onchange="updateGlobeData()">
         <option value ="0">confirmed</option>
         <option value ="1">deaths</option>
     </select>
-    
-    
-     
-     </div>
-   <!--<div id="currentInfo">
-    <span id="20-01-22" class="day">01/22/20</span>
-    <span id="20-01-23" class="day">01/23/20</span>
-    <span id="20-01-24" class="day">01/24/20</span>
-    <span id="20-01-25" class="day">01/25/20</span>
-    <span id="20-01-26" class="day">01/26/20</span>
-    <span id="20-01-27" class="day">01/27/20</span>
-    <span id="20-01-28" class="day">01/28/20</span>
-    <span id="20-01-29" class="day">01/29/20</span>
-    <span id="20-01-30" class="day">01/30/20</span>
-    <span id="20-01-31" class="day">01/31/20</span>
-    <span id="20-02-01" class="day">02/01/20</span>
-    <span id="20-02-02" class="day">02/02/20</span>
-    <span id="20-02-03" class="day">02/03/20</span>
-    <span id="20-02-04" class="day">02/04/20</span>
-    <span id="20-02-05" class="day">02/05/20</span>
-    <span id="20-02-06" class="day">02/06/20</span>
-    <span id="20-02-07" class="day">02/07/20</span>
-    <span id="20-02-08" class="day">02/08/20</span>
-    <span id="20-02-09" class="day">02/09/20</span>
-    <span id="20-02-10" class="day">02/10/20</span>
-    <span id="20-02-11" class="day">02/11/20</span>
-    <span id="20-02-12" class="day">02/12/20</span>
-    <span id="20-02-13" class="day">02/13/20</span>
-    <span id="20-02-14" class="day">02/14/20</span>
-    <span id="20-02-15" class="day">02/15/20</span>
-    <span id="20-02-16" class="day">02/16/20</span>
-    <span id="20-02-17" class="day">02/17/20</span>
-    <span id="20-02-18" class="day">02/18/20</span>
-    <span id="20-02-19" class="day">02/19/20</span>
-    <span id="20-02-20" class="day">02/20/20</span>
-    <span id="20-02-21" class="day">02/21/20</span>
-    <span id="20-02-22" class="day">02/22/20</span>
-    <span id="20-02-23" class="day">02/23/20</span>
-    <span id="20-02-24" class="day">02/24/20</span>
-    <span id="20-02-25" class="day">02/25/20</span>
-    <span id="20-02-26" class="day">02/26/20</span>
-    <span id="20-02-27" class="day">02/27/20</span>
-    <span id="20-02-28" class="day">02/28/20</span>
-    <span id="20-02-29" class="day">02/29/20</span>
-    <span id="20-03-01" class="day">03/01/20</span>
-    <span id="20-03-02" class="day">03/02/20</span>
-    <span id="20-03-03" class="day">03/03/20</span>
-    <span id="20-03-04" class="day">03/04/20</span>
-    <span id="20-03-05" class="day">03/05/20</span>
-    <span id="20-03-06" class="day">03/06/20</span>
-    <span id="20-03-07" class="day">03/07/20</span>
-    <span id="20-03-08" class="day">03/08/20</span>
-    <span id="20-03-09" class="day">03/09/20</span>
-    <span id="20-03-10" class="day">03/10/20</span>
-    <span id="20-03-11" class="day">03/11/20</span>
-    <span id="20-03-12" class="day">03/12/20</span>
-    <span id="20-03-13" class="day">03/13/20</span>
-    <span id="20-03-14" class="day">03/14/20</span>
-    <span id="20-03-15" class="day">03/15/20</span>
-    <span id="20-03-16" class="day">03/16/20</span>
-    <span id="20-03-17" class="day">03/17/20</span>
-    <span id="20-03-18" class="day">03/18/20</span>
-    <span id="20-03-19" class="day">03/19/20</span>
-    <span id="20-03-20" class="day">03/20/20</span>
-    <span id="20-03-21" class="day">03/21/20</span>
-    <span id="20-03-22" class="day">03/22/20</span>
-    <span id="20-03-23" class="day">03/23/20</span>
-    <span id="20-03-24" class="day">03/24/20</span>
-    <span id="20-03-25" class="day">03/25/20</span>
-    <span id="20-03-26" class="day">03/26/20</span>
-    <span id="20-03-27" class="day">03/27/20</span>
-    <span id="20-03-28" class="day">03/28/20</span>
-   </div>-->
-  
-
- 
+  </div>
   <script type="text/javascript" src="third-party/Detector.js"></script>
   <script type="text/javascript" src="third-party/three.min.js"></script>
   <script type="text/javascript" src="third-party/Tween.js"></script>
   <script type="text/javascript" src="globe.js"></script>
   <script type="text/javascript" src="main.js"></script>
-
   </body>
-
 </html>

@@ -75,10 +75,10 @@ if (!Detector.webgl) {
     "20-03-29",
     "20-03-30",
   ];
-  var container = document.getElementById("container");
+  var container = document.getElementById("globe-container");
   //Disabling old automatic colour choosing system
-  //var globe = new DAT.Globe(container);
-  //var globe = new DAT.Globe(container, function(x){
+  //var globe = new DAT.Globe(globe-container);
+  //var globe = new DAT.Globe(globe-container, function(x){
   //return new THREE.Color(0xc62828);
   //});
 
@@ -90,7 +90,7 @@ if (!Detector.webgl) {
 }
 
 function clearData() {
-  var myNode = document.getElementById("container");
+  var myNode = document.getElementById("globe-container");
   while (myNode.firstChild) {
     myNode.removeChild(myNode.firstChild);
   }
@@ -161,11 +161,23 @@ function loadData(url) {
         //globe.time= 0;
         globe.animate();
         document.body.style.backgroundImage = "none"; // remove loading
-        window.setInterval(function () {
+        /*window.setInterval(function () {
           change();
-        }, 3000);
+        }, 4000);*/
       }
     }
   };
   xhr.send(null);
 }
+	 	function updateGlobeData(){
+			var theSelection = document.getElementById("dataSelection").selectedIndex;
+			
+				
+			if (theSelection == 0){
+				
+				loadData('data/confirmed.json');
+			}else{
+				
+				loadData('data/deaths.json');
+			}
+		}
