@@ -21,18 +21,25 @@
   </head>
   <body>
   
-    <div class="container-sm">
-      <div id="confirmed-total" class="alert alert-warning" role="alert">Confirmed</div>
+    <div class="container">
+    <div class="row mb-3">
+      <div class="col-3">
+         <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="inlineCheckbox1" value="option1">
+          <label class="form-check-label" for="inlineCheckbox1">Automatic Progress</label>
+        </div>
+      </div>
+      <div class="col-3">
+        <div id="confirmed-total" class="alert alert-warning" role="alert">Confirmed</div>
+      </div>
+      <div class="col-3">
+        <div id="deaths-total" class="alert alert-danger" role="alert">Deaths</div>
+      </div>
+      <div class="col-3">
+        <div id="recoreved-total" class="alert alert-success" role="alert">Recoreved</div>
+      </div>
     </div>
-    <div class="container-sm">
-      <div id="deaths-total" class="alert alert-danger" role="alert">Deaths</div>
-    </div>
-    <div class="container-sm">
-      <div id="recoreved-total" class="alert alert-success" role="alert">Recoreved</div>
-    </div>
-    <button type="button" class="btn btn-primary" data-toggle="button" aria-pressed="false">
-        Single toggle
-    </button>
+
 
   <div id="globe-container"></div>
 
