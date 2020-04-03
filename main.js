@@ -74,6 +74,9 @@ if (!Detector.webgl) {
     "20-03-28",
     "20-03-29",
     "20-03-30",
+    "20-03-31",
+    "20-04-01",
+    "20-04-02",
   ];
   var container = document.getElementById("globe-container");
   //Disabling old automatic colour choosing system
@@ -84,11 +87,26 @@ if (!Detector.webgl) {
 
   var globe;
 
+  document.addEventListener('DOMContentLoaded', function() {
+     var elems = document.querySelectorAll('.datepicker');
+     var instances = M.Datepicker.init(elems, 
+     {
+       minDate: new Date("2020-01-22"),
+       maxDate: new Date("2020-04-02"),
+       onSelect: changeDataFromDatePicker,
+       autoClose: true,
+     })
+  });
   //console.log(globe);
 
   loadData("data/confirmed.json");
 }
 
+function changeDataFromDatePicker(newDate) {
+  console.log("changeDataFromDatePicker")
+  console.log(newDate)
+
+}
 function clearData() {
   var myNode = document.getElementById("globe-container");
   while (myNode.firstChild) {
@@ -169,15 +187,12 @@ function loadData(url) {
   };
   xhr.send(null);
 }
-	 	function updateGlobeData(){
-			var theSelection = document.getElementById("dataSelection").selectedIndex;
-			
-				
-			if (theSelection == 0){
-				
-				loadData('data/confirmed.json');
-			}else{
-				
-				loadData('data/deaths.json');
-			}
-		}
+function updateGlobeData(){
+  var theSelection = document.getElementById("dataSelection").selectedIndex;
+  if (theSelection == 0){
+    loadData('data/confirmed.json');
+  }else{
+    
+    loadData('data/deaths.json');
+  }
+}

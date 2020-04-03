@@ -3,60 +3,80 @@
   <head>
     <title>COVID-19 virus spread</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="third-party/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
 
     <!-- Modified from https://www.adaptivemobile.com/spamglobe/ -->
     <meta name="description" content="Using webgl to map the spread of covid-19" />
     <meta charset="utf-8">
     <style type="text/css">
       body {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
         background: #000000 url(images/loading.gif) center center no-repeat;
-        color: #ffffff;
+      }
+
+      main {
+        flex: 1 0 auto;
       }
 
     </style>
-  <script src="third-party/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
-  <script src="third-party/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
-  <script src="third-party/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
   </head>
   <body>
-  
-    <div class="container">
-    <div class="row mb-3">
-      <div class="col-3">
-         <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="inlineCheckbox1" value="option1">
-          <label class="form-check-label" for="inlineCheckbox1">Automatic Progress</label>
+        <div id="globe-container"></div>
+    <header>
+        <div class="row">
+          <div class="col s3">
+            <p>
+              <label>
+                <input type="checkbox" class="filled-in" checked="checked" />
+                <span>Autoload Next Day</span>
+              </label>
+            </p>
+          </div>
+          <div class="col s3 white-text">
+             <div id="confirmed-total" class="alert alert-warning" role="alert">Confirmed</div>
+          </div>
+          <div class="col s3 white-text">
+            <div id="deaths-total" class="alert alert-danger" role="alert">Deaths</div>
+          </div>
+          <div class="col s3 white-text">
+            <div id="recoreved-total" class="alert alert-success" role="alert">Recoreved</div>
+          </div>
         </div>
-      </div>
-      <div class="col-3">
-        <div id="confirmed-total" class="alert alert-warning" role="alert">Confirmed</div>
-      </div>
-      <div class="col-3">
-        <div id="deaths-total" class="alert alert-danger" role="alert">Deaths</div>
-      </div>
-      <div class="col-3">
-        <div id="recoreved-total" class="alert alert-success" role="alert">Recoreved</div>
-      </div>
-    </div>
-
-
-  <div id="globe-container"></div>
-
-  <div id="info">
-    <strong><a href="http://www.chromeexperiments.com/globe">Uses Google WebGL Globe</a></strong>
-  </div>
-
-  <div id="dataSelectDropdown">
-  <select name="dataSelection" id="dataSelection" onchange="updateGlobeData()">
-        <option value ="0">confirmed</option>
-        <option value ="1">deaths</option>
-    </select>
-  </div>
-  <script type="text/javascript" src="third-party/Detector.js"></script>
-  <script type="text/javascript" src="third-party/three.min.js"></script>
-  <script type="text/javascript" src="third-party/Tween.js"></script>
-  <script type="text/javascript" src="globe.js"></script>
-  <script type="text/javascript" src="main.js"></script>
+  
+        <div class="row">
+          <div class="input-field col s12">
+            <div id="dataSelectDropdown">
+              <select name="dataSelection" id="dataSelection" onchange="updateGlobeData()">
+                <option value="0">confirmed</option>
+                <option value="1">deaths</option>
+                <option value="1">recovered</option>
+              </select>
+            <label>Data Set</label>
+            </div>
+          </div>
+          <div class="col s3">
+             <input type="text" class="datepicker grey darken-4" id="inputDate">
+          </div>
+        </div>
+    </header>
+    <!--<footer class="page-footer green darken-4">
+      <div class="container green darken-4">
+        <div class="row">
+           <div class="col l6 s12">
+             <strong><a href="http://www.chromeexperiments.com/globe">Uses Google WebGL Globe</a></strong>
+           </div>
+         </div>
+       </div>
+     </footer> Breaking the page, gotta fix -->
+    <script type="text/javascript" src="third-party/Detector.js"></script>
+    <script type="text/javascript" src="third-party/three.min.js"></script>
+    <script type="text/javascript" src="third-party/Tween.js"></script>
+    <script type="text/javascript" src="globe.js"></script>
+    <script type="text/javascript" src="main.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   </body>
 </html>
