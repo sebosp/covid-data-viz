@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="description" content="Using D3 to graph the covid spread">
+    <title> D3 Gallery Index </title>
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3-array.v2.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inconsolata" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style type="text/css">
+        li.logo {
+            text-align: center;
+            margin-top: 16px;
+            margin-bottom: 32px;
+            color: #777;
+            margin-bottom: -1px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.14);
+        }
+
+        header,
+        main,
+        footer {
+            padding-left: 300px;
+        }
+
+        .header {
+            color: #39796b;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container"><a href="#" data-target="nav-mobile"
+                class="top-nav sidenav-trigger waves-effect waves-light circle hide-on-large-only"><i
+                    class="material-icons">menu</i></a></div>
+        <ul id="nav-mobile" class="sidenav sidenav-fixed">
+            <li class="logo"><a href="index.html" class="brand-logo">
+                    <h5 class="header">D3 Gallery</h5>
+                </a></li>
+            <li class="no-padding">
+                <ul class="collapsible collapsible-accordion">
+                    <li class="bold"><a class="collapsible-header waves-effect waves-teal">Time Series</a>
+                        <div class="collapsible-body">
+                            <ul>
+                                <li><a href="basic-multiline.html" target="d3_chart_display">Basic MultiLine</a></li>
+                                <li><a href="basic-multiline.html" target="d3_chart_display"></a></li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </header>
+    <main>
+        <div class="section" id="index-banner">
+            <div class="container">
+                <div class="row" style="margin-bottom: 0;">
+                    <div class="col s12 m8 offset-m1 xl7 offset-xl1 center-on-small-only">
+                        <p>Last updated: 2020-04-05</p>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12 m8 offset-m1 offset-xl1 center-on-small-only">
+                    <h2>Confirmed Cases</h2>
+                </div>
+                <div class="col s12 m8 offset-m1 offset-xl1 center-on-small-only">
+                    <iframe name="d3_chart_display" style="height: 600px; min-width: 100%; width: 0px;" class="absolute bn " scrolling="no"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-top-navigation"
+                        allow="geolocation; microphone; camera; midi; encrypted-media; autoplay; accelerometer; magnetometer; gyroscope; vr"
+                        allowfullscreen="" src="basic-multiline.html"></iframe>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12 m8 offset-m1 offset-xl1 center-on-small-only">
+                    <h2>Deaths</h2>
+                </div>
+                <div class="col s12 m8 offset-m1 offset-xl1 center-on-small-only">
+                    <iframe name="d3_chart_display" style="height: 600px; min-width: 100%; width: 0px;" class="absolute bn " scrolling="no"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-top-navigation"
+                        allow="geolocation; microphone; camera; midi; encrypted-media; autoplay; accelerometer; magnetometer; gyroscope; vr"
+                        allowfullscreen="" src="basic-multiline.html?type=deaths"></iframe>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12 m8 offset-m1 offset-xl1 center-on-small-only">
+                    <h2>Recovered Cases</h2>
+                </div>
+                <div class="col s12 m8 offset-m1 offset-xl1 center-on-small-only">
+                    <iframe name="d3_chart_display" style="height: 600px; min-width: 100%; width: 0px;" class="absolute bn " scrolling="no"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox allow-top-navigation"
+                        allow="geolocation; microphone; camera; midi; encrypted-media; autoplay; accelerometer; magnetometer; gyroscope; vr"
+                        allowfullscreen="" src="basic-multiline.html?type=recovered"></iframe>
+                </div>
+            </div>
+            <div class="container">
+                <!--  Outer row  -->
+                <div class="row">
+                    <div class="col s12 m8 offset-m1 xl7 offset-xl1 center-on-small-only">
+                        <div class="section scrollspy">
+                            <h2 class="header">Source of Data</h2>
+                            <p class="caption">
+                                The soure of the data is the https://github.com/CSSEGISandData/COVID-19 repository
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var elems = document.querySelectorAll('.collapsible');
+            var instances = M.Collapsible.init(elems, {});
+        });
+    </script>
+</body>
+
+</html>
