@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="description" content="Using D3 to graph the covid spread">
+    <title> D3 Gallery Index </title>
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3-array.v2.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inconsolata" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body>
+    <div id="chart-div"></div>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var elems = document.querySelectorAll('.collapsible');
+            var instances = M.Collapsible.init(elems, {});
+        });
+        chartWidth = 762
+        chartHeight = 600
+        margin = ({top: 20, right: 20, bottom: 30, left: 50})
+        function getParamValue(paramName) {
+            var url = window.location.search.substring(1); //get rid of "?" in querystring
+            var qArray = url.split('&'); //get key-value pairs
+            for (var i = 0; i < qArray.length; i++) {
+                var pArr = qArray[i].split('='); //split key and value
+                if (pArr[0] == paramName)
+                    return pArr[1]; //return value
+            }
+            return false
+        }
+        function createSvgNode(data) {
+            const svg = d3.select("#chart-div").append("svg")
+                .attr("viewBox", [0, 0, chartWidth, chartHeight])
+                .style("overflow", "visible");
+
+            svg.append("g")
+                .call(xAxis);
+
+            svg.append("g")
+                .call(yAxis);
+
+            const path = svg.append("g")
+                .attr("fill", "none")
+                .attr("stroke", "#01579b")
+                .attr("stroke-chartWidth", 1.5)
+                .attr("stroke-linejoin", "round")
+                .attr("stroke-linecap", "round")
+                .selectAll("path")
+                .data(data.series)
+                .join("path")
+                .style("mix-blend-mode", "multiply")
+                .attr("d", d => line(d.values));
+
+            svg.call(hover, path, data);
+
+            return svg.node();
+        }
+        async function loadDataSet(url) {
+            const data = await d3.csv(url);
+            // The first columns are:
+            // "Province/State", "Country/Region", "Lat", "Long",
+            const columns = data.columns.slice(4);
+            countries = {};
+            data.map(function (d) {
+                currLoc = d["Country/Region"];
+                if (countries[currLoc] === undefined) {
+                    countries[currLoc] = {}
+                }
+                for (dayKey = 0; dayKey < columns.length; dayKey++) {
+                    if (countries[currLoc][columns[dayKey]] === undefined) {
+                        countries[currLoc][columns[dayKey]] = parseInt(d[columns[dayKey]], 10)
+                    } else {
+                        countries[currLoc][columns[dayKey]] += parseInt(d[columns[dayKey]], 10)
+                    }
+                }
+            });
+            countryKeys = Object.keys(countries)
+            // Now we need to create an array that starts from the first confirmed cases
+            day_columns = Array();
+            for (colIdx = 4; colIdx < data.columns.length; colIdx++){
+                day_columns.push(colIdx - 4);
+            }
+            summedData = Array();
+            for (countryIdx = 0; countryIdx < countryKeys.length; countryIdx++) {
+                newObj = {}
+                country_array = Array();
+                dayKeys = Object.keys(countries[countryKeys[countryIdx]])
+                currDayIdx = 0;
+                for (dayIdx = 0; dayIdx < dayKeys.length; dayIdx ++){
+                    if (countries[countryKeys[countryIdx]][dayKeys[dayIdx]] > 0){
+                        newObj[""+currDayIdx] = countries[countryKeys[countryIdx]][dayKeys[dayIdx]]
+                        currDayIdx++;
+                    }
+                }
+                newObj["Country/Region"] = countryKeys[countryIdx];
+                summedData.push(newObj);
+            }
+
+            return {
+                y: "Number of people",
+                series: summedData.map(d => ({
+                    name: d["Country/Region"],
+                    values: day_columns.map(k => +d[k])
+                })),
+                days: day_columns,
+            };
+        }
+        function hover(svg, path, data) {
+
+            if ("ontouchstart" in document) svg
+                .style("-webkit-tap-highlight-color", "transparent")
+                .on("touchmove", moved)
+                .on("touchstart", entered)
+                .on("touchend", left)
+            else svg
+                .on("mousemove", moved)
+                .on("mouseenter", entered)
+                .on("mouseleave", left);
+
+            const dot = svg.append("g")
+                .attr("display", "none");
+
+            dot.append("circle")
+                .attr("r", 2.5);
+
+            dot.append("text")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", 10)
+                .attr("text-anchor", "middle")
+                .attr("y", -8);
+
+            function moved() {
+                d3.event.preventDefault();
+                const ym = y.invert(d3.event.layerY);
+                const xm = x.invert(d3.event.layerX);
+                //console.log({xm: ym, ym: ym});
+                const i1 = d3.bisectLeft(data.days, xm, 1);
+                const i0 = i1 - 1;
+                const i = xm - data.days[i0] > data.days[i1] - xm ? i1 : i0;
+                const s = d3.least(data.series, d => Math.abs(d.values[i] - ym));
+                path.attr("stroke", d => d === s ? null : "#ddd").filter(d => d === s).raise();
+                dot.attr("transform", `translate(${x(data.days[i])},${y(s.values[i])})`);
+                dot.select("text").text(s.name);
+            }
+
+            function entered() {
+                path.style("mix-blend-mode", null).attr("stroke", "#ddd");
+                dot.attr("display", null);
+            }
+
+            function left() {
+                path.style("mix-blend-mode", "multiply").attr("stroke", null);
+                dot.attr("display", "none");
+            }
+        }
+        datasource = getParamValue('type') || "confirmed";
+        charts = {
+            confirmed: "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv",
+            deaths: "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv",
+            recovered: "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv",
+        }
+        loadDataSet(charts[datasource]).then(function (data) {
+            console.log("Data Loaded");
+            x = d3.scaleLinear()
+                .domain([0, data.days.length]).nice()
+                .range([margin.left, chartWidth - margin.right])
+            y = d3.scaleLinear()
+                .domain([0, d3.max(data.series, d => d3.max(d.values))]).nice()
+                .range([chartHeight - margin.bottom, margin.top])
+            xAxis = g => g
+                .attr("transform", `translate(0,${chartHeight - margin.bottom})`)
+                .call(d3.axisBottom(x).ticks(chartWidth / 80).tickSizeOuter(0))
+            yAxis = g => g
+                .attr("transform", `translate(${margin.left},0)`)
+                .call(d3.axisLeft(y))
+                .call(g => g.select(".domain").remove())
+                .call(g => g.select(".tick:last-of-type text").clone()
+                    .attr("x", 3)
+                    .attr("text-anchor", "start")
+                    .attr("font-weight", "bold")
+                    .text(data.y))
+            line = d3.line()
+                .defined(d => !isNaN(d))
+                .x((d, i) => x(data.days[i]))
+                .y(d => y(d))
+            console.log("Creating SVG");
+            createSvgNode(data);
+        })
+    </script>
+</body>
+
+</html>
