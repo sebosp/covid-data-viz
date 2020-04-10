@@ -381,7 +381,7 @@ DAT.Globe = function(container, colorFn) {
   }
 
   function animate() {
-    requestAnimationFrame(animate);
+    //requestAnimationFrame(animate);
     render();
   }
 
