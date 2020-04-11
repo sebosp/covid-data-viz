@@ -184,7 +184,7 @@ DAT.Globe = function (container, colorFn) {
 
         container.appendChild(renderer.domElement);
 
-        container.addEventListener('touchstart', this.onMouseDown, false);
+        //container.addEventListener('touchstart', this.onMouseDown, false);
         container.addEventListener('mousedown', this.onMouseDown, false);
         container.addEventListener('mousewheel', this.onMouseWheel, false);
         document.addEventListener('keydown', this.onDocumentKeyDown, false);
@@ -317,9 +317,9 @@ DAT.Globe = function (container, colorFn) {
         container.addEventListener('mousemove', globe.onMouseMove, false);
         container.addEventListener('mouseup', globe.onMouseUp, false);
         container.addEventListener('mouseout', globe.onMouseOut, false);
-        container.addEventListener('touchmove', globe.onMouseMove, false);
-        container.addEventListener('touchend', globe.onMouseUp, false);
-        container.addEventListener('touchcancel', globe.onMouseOut, false);
+        //container.addEventListener('touchmove', globe.onMouseMove, false);
+        //container.addEventListener('touchend', globe.onMouseUp, false);
+        //container.addEventListener('touchcancel', globe.onMouseOut, false);
 
         mouseOnDown.x = - event.clientX;
         mouseOnDown.y = event.clientY;
@@ -347,9 +347,9 @@ DAT.Globe = function (container, colorFn) {
         container.removeEventListener('mousemove', globe.onMouseMove, false);
         container.removeEventListener('mouseup', globe.onMouseUp, false);
         container.removeEventListener('mouseout', globe.onMouseOut, false);
-        container.removeEventListener('touchmove', globe.onMouseMove, false);
-        container.removeEventListener('touchend', globe.onMouseUp, false);
-        container.removeEventListener('touchcancel', globe.onMouseOut, false);
+        //container.removeEventListener('touchmove', globe.onMouseMove, false);
+        //container.removeEventListener('touchend', globe.onMouseUp, false);
+        //container.removeEventListener('touchcancel', globe.onMouseOut, false);
         container.style.cursor = 'auto';
     }
 
@@ -357,9 +357,9 @@ DAT.Globe = function (container, colorFn) {
         container.removeEventListener('mousemove', globe.onMouseMove, false);
         container.removeEventListener('mouseup', globe.onMouseUp, false);
         container.removeEventListener('mouseout', globe.onMouseOut, false);
-        container.removeEventListener('touchmove', globe.onMouseMove, false);
-        container.removeEventListener('touchend', globe.onMouseUp, false);
-        container.removeEventListener('touchcancel', globe.onMouseOut, false);
+        //container.removeEventListener('touchmove', globe.onMouseMove, false);
+        //container.removeEventListener('touchend', globe.onMouseUp, false);
+        //container.removeEventListener('touchcancel', globe.onMouseOut, false);
     }
 
     this.onMouseWheel = function (event) {
