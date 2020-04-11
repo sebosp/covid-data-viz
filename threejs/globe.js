@@ -148,9 +148,9 @@ DAT.Globe = function (container, colorFn) {
         //SPACE
 
 
-        var urls = [imgDir + 'stars.jpg', imgDir + 'stars.jpg',
-        imgDir + 'stars.jpg', imgDir + 'stars.jpg',
-        imgDir + 'stars.jpg', imgDir + 'stars.jpg'];
+        var urls = [imgDir + 'hearingaid.jpg', imgDir + 'hearingaid.jpg',
+        imgDir + 'hearingaid.jpg', imgDir + 'hearingaid.jpg',
+        imgDir + 'hearingaid.jpg', imgDir + 'hearingaid.jpg'];
         var textureCube = THREE.ImageUtils.loadTextureCube(urls);
         var shader = THREE.ShaderLib["cube"];
         //var shader = THREE.ShaderUtils.lib["cube"];
@@ -184,7 +184,7 @@ DAT.Globe = function (container, colorFn) {
 
         container.appendChild(renderer.domElement);
 
-        //container.addEventListener('touchstart', this.onMouseDown, false);
+        container.addEventListener('touchstart', this.onMouseDown, false);
         container.addEventListener('mousedown', this.onMouseDown, false);
         container.addEventListener('mousewheel', this.onMouseWheel, false);
         document.addEventListener('keydown', this.onDocumentKeyDown, false);
@@ -317,13 +317,17 @@ DAT.Globe = function (container, colorFn) {
         container.addEventListener('mousemove', globe.onMouseMove, false);
         container.addEventListener('mouseup', globe.onMouseUp, false);
         container.addEventListener('mouseout', globe.onMouseOut, false);
-        //container.addEventListener('touchmove', globe.onMouseMove, false);
-        //container.addEventListener('touchend', globe.onMouseUp, false);
-        //container.addEventListener('touchcancel', globe.onMouseOut, false);
+        container.addEventListener('touchmove', globe.onMouseMove, false);
+        container.addEventListener('touchend', globe.onMouseUp, false);
+        container.addEventListener('touchcancel', globe.onMouseOut, false);
 
-        mouseOnDown.x = - event.clientX;
-        mouseOnDown.y = event.clientY;
-
+        if(event.type == "touchstart"){
+          mouseOnDown.x = - event.changedTouches[0].clientX;
+          mouseOnDown.y = event.changedTouches[0].clientY;
+        } else{
+          mouseOnDown.x = - event.clientX;
+          mouseOnDown.y = event.clientY;
+        }
         this.targetOnDown.x = this.target.x;
         this.targetOnDown.y = this.target.y;
 
@@ -331,8 +335,13 @@ DAT.Globe = function (container, colorFn) {
     }
 
     this.onMouseMove = function (event) {
-        mouse.x = - event.clientX;
-        mouse.y = event.clientY;
+        if(event.type == "touchmove"){
+          mouse.x = - event.changedTouches[0].clientX;
+          mouse.y = event.changedTouches[0].clientY;
+        } else {
+          mouse.x = - event.clientX;
+          mouse.y = event.clientY;
+        }
 
         var zoomDamp = distance / 1000;
 
@@ -347,9 +356,9 @@ DAT.Globe = function (container, colorFn) {
         container.removeEventListener('mousemove', globe.onMouseMove, false);
         container.removeEventListener('mouseup', globe.onMouseUp, false);
         container.removeEventListener('mouseout', globe.onMouseOut, false);
-        //container.removeEventListener('touchmove', globe.onMouseMove, false);
-        //container.removeEventListener('touchend', globe.onMouseUp, false);
-        //container.removeEventListener('touchcancel', globe.onMouseOut, false);
+        container.removeEventListener('touchmove', globe.onMouseMove, false);
+        container.removeEventListener('touchend', globe.onMouseUp, false);
+        container.removeEventListener('touchcancel', globe.onMouseOut, false);
         container.style.cursor = 'auto';
     }
 
@@ -357,9 +366,9 @@ DAT.Globe = function (container, colorFn) {
         container.removeEventListener('mousemove', globe.onMouseMove, false);
         container.removeEventListener('mouseup', globe.onMouseUp, false);
         container.removeEventListener('mouseout', globe.onMouseOut, false);
-        //container.removeEventListener('touchmove', globe.onMouseMove, false);
-        //container.removeEventListener('touchend', globe.onMouseUp, false);
-        //container.removeEventListener('touchcancel', globe.onMouseOut, false);
+        container.removeEventListener('touchmove', globe.onMouseMove, false);
+        container.removeEventListener('touchend', globe.onMouseUp, false);
+        container.removeEventListener('touchcancel', globe.onMouseOut, false);
     }
 
     this.onMouseWheel = function (event) {
