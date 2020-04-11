@@ -145,9 +145,8 @@ function centerLatLongWithMax() {
             maxLon = currLon;
         }
     }
-    globe.target.x = (Math.PI / 2) * 3 + ((Math.PI * maxLon) / 180);
-    globe.target.y = (((Math.PI / 2) * maxLat) / 90);
-
+    globe.target.x = (Math.PI / 2) * 3 + ((Math.PI * maxLon) / 180) + 0.1;
+    globe.target.y = (((Math.PI / 2) * maxLat) / 90) - 0.1;
 }
 function change(i) {
     console.log("Changing data for index:" + current_index);
