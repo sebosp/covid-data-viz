@@ -321,12 +321,12 @@ DAT.Globe = function (container, colorFn) {
         container.addEventListener('touchend', globe.onMouseUp, false);
         container.addEventListener('touchcancel', globe.onMouseOut, false);
 
-        if(event.type == "touchstart"){
-          mouseOnDown.x = - event.changedTouches[0].clientX;
-          mouseOnDown.y = event.changedTouches[0].clientY;
-        } else{
-          mouseOnDown.x = - event.clientX;
-          mouseOnDown.y = event.clientY;
+        if (event.type == "touchstart") {
+            mouseOnDown.x = - event.changedTouches[0].clientX;
+            mouseOnDown.y = event.changedTouches[0].clientY;
+        } else {
+            mouseOnDown.x = - event.clientX;
+            mouseOnDown.y = event.clientY;
         }
         this.targetOnDown.x = this.target.x;
         this.targetOnDown.y = this.target.y;
@@ -335,12 +335,12 @@ DAT.Globe = function (container, colorFn) {
     }
 
     this.onMouseMove = function (event) {
-        if(event.type == "touchmove"){
-          mouse.x = - event.changedTouches[0].clientX;
-          mouse.y = event.changedTouches[0].clientY;
+        if (event.type == "touchmove") {
+            mouse.x = - event.changedTouches[0].clientX;
+            mouse.y = event.changedTouches[0].clientY;
         } else {
-          mouse.x = - event.clientX;
-          mouse.y = event.clientY;
+            mouse.x = - event.clientX;
+            mouse.y = event.clientY;
         }
 
         var zoomDamp = distance / 1000;
