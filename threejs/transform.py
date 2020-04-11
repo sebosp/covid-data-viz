@@ -164,7 +164,7 @@ def print_current_info_div(gps_scaled_records, daily_series):
 
 def main():
   logging.basicConfig(level=logging.INFO)
-  date_keys, confirmed_gps_data = parse_csv_file("../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
+  date_keys, confirmed_gps_data = parse_csv_file("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
   #logging.info("Writing data/confirmed-raw.json")
   #with open("data/confirmed-raw.json", "w") as file_handle:
   #  file_handle.write(generate_globe_json_string(confirmed_gps_data, date_keys))
@@ -174,17 +174,18 @@ def main():
   with open("data/confirmed.json", "w") as file_handle:
     file_handle.write(generate_globe_json_string(scaled_confirmed_data, date_keys))
   logging.info("Finished writing data/confirmed.json")
-  date_keys, deaths_gps_data = parse_csv_file("../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
-  #logging.info("Writing data/deaths-raw.json")
-  #with open("data/deaths-raw.json", "w") as file_handle:
-  #  file_handle.write(generate_globe_json_string(deaths_gps_data, date_keys))
-  #logging.info("Finished writing data/deaths-raw.json")
+  date_keys, deaths_gps_data = parse_csv_file("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
   scaled_deaths_data = scale_daily_values(deaths_gps_data)
   logging.info("Writing data/deaths.json")
   with open("data/deaths.json", "w") as file_handle:
     file_handle.write(generate_globe_json_string(scaled_deaths_data, date_keys))
   logging.info("Finished writing data/deaths.json")
-  #print_current_info_div(scaled_confirmed_data, date_keys)
+  date_keys, deaths_gps_data = parse_csv_file("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv")
+  scaled_deaths_data = scale_daily_values(deaths_gps_data)
+  logging.info("Writing data/deaths.json")
+  with open("data/deaths.json", "w") as file_handle:
+    file_handle.write(generate_globe_json_string(scaled_deaths_data, date_keys))
+  logging.info("Finished writing data/deaths.json")
 
 if __name__ == "__main__":
   main()
