@@ -2,6 +2,8 @@ if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
     var current_index = 0;
+    // By default focus the region with the max totals
+    var current_stat_type = "max_total"
     var colors = [0xc62828];
     // TODO: this is not sync'ed properly, i.e. if there are different dates in death/confirmed, then this runs ouf ot sync.
     var days = [
@@ -85,6 +87,7 @@ if (!Detector.webgl) {
         "20-04-08",
         "20-04-09",
         "20-04-10",
+        "20-04-11",
     ];
     var container = document.getElementById("globe-container");
 
@@ -123,41 +126,36 @@ function incrementDayBy(offset) {
 
 function centerLatLongWithMax() {
     // Data contains an array with:
-    // [ "Series Name", [<actual Values>]
-    dayValues = data[current_index][1];
-    // dayValues is composed of:
-    // [lat, long, magnitude, lat, long magnitude, ...]
-    // Let's find the highest lat,long magnitude and rotate there:
-    maxLat = 0;
-    maxLon = 0;
-    currLat = 0;
-    currLon = 0;
-    maxValue = -1.0;
-    for (valueIdx = 0; valueIdx < dayValues.length; valueIdx++) {
-        if (valueIdx % 3 == 0) {
-            currLat = dayValues[valueIdx];
-        }
-        if (valueIdx % 3 == 1) {
-            currLon = dayValues[valueIdx];
-        }
-        if (valueIdx % 3 == 2 && dayValues[valueIdx] > maxValue) {
-            maxValue = dayValues[valueIdx]
-            maxLat = currLat;
-            maxLon = currLon;
-        }
-    }
-    globe.target.x = (Math.PI / 2) * 3 + ((Math.PI * maxLon) / 180) + 0.1;
-    globe.target.y = (((Math.PI / 2) * maxLat) / 90) - 0.1;
+    // [ {
+    //   total: x,
+    //   name: "series_name",
+    //   focus: {
+    //     max_total: {
+    //       value: y,
+    //       lat: lat,
+    //       lon: lon,
+    //       location: "Country, Location"
+    //     }
+    //   }
+    // }, [<actual Values>]
+    dayInfo = data[current_index][0];
+    lat = dayInfo["focus"]["max_total"]["lat"]
+    lon = dayInfo["focus"]["max_total"]["lon"]
+    // Add a bit of offset so that we can see the magnitude (z) axis
+    // otherwise we are straight on top of the magnitude bar and it's not possible to see the height
+    offset = 0.1
+    globe.target.x = (Math.PI / 2) * 3 + ((Math.PI * lon) / 180) + offset;
+    globe.target.y = (((Math.PI / 2) * lat) / 90) - offset;
 }
 function change(i) {
     console.log("Changing data for index:" + current_index);
     if (window.data) {
         if (i) {
-            current_index = i;
+            current_index = i % window.data.length;
         }
-        dayInfo = window.data[current_index][0].split(' with ');
-        document.getElementById("current-day").innerHTML = dayInfo[0]
-        document.getElementById("current-stats").innerHTML = dayInfo[1]
+        dayInfo = window.data[current_index][0]
+        document.getElementById("current-day").innerHTML = dayInfo["name"]
+        document.getElementById("current-stats").innerHTML = dayInfo["focus"]["max_total"]["value"]
         globe.resetData();
         globe.addData(window.data[current_index][1], {format: "magnitude", datasetType: datasetType});
         globe.createPoints();

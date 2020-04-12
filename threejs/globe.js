@@ -374,7 +374,7 @@ DAT.Globe = function (container, colorFn) {
     this.onMouseWheel = function (event) {
         event.preventDefault();
         if (overRenderer) {
-            zoom(event.wheelDeltaY * 0.3);
+            globe.zoom(event.wheelDeltaY * 0.3);
         }
         return false;
     }
@@ -382,11 +382,11 @@ DAT.Globe = function (container, colorFn) {
     this.onDocumentKeyDown = function (event) {
         switch (event.keyCode) {
             case 38:
-                zoom(100);
+                globe.zoom(100);
                 event.preventDefault();
                 break;
             case 40:
-                zoom(-100);
+                globe.zoom(-100);
                 event.preventDefault();
                 break;
         }
