@@ -155,7 +155,7 @@ function change(i) {
         }
         dayInfo = window.data[current_index][0]
         document.getElementById("current-day").innerHTML = dayInfo["name"]
-        document.getElementById("current-stats").innerHTML = dayInfo["focus"]["max_total"]["value"]
+        document.getElementById("current-stats").innerHTML = dayInfo["focus"]["max_total"]["value"] + " Total"
         globe.resetData();
         globe.addData(window.data[current_index][1], {format: "magnitude", datasetType: datasetType});
         globe.createPoints();
