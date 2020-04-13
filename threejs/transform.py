@@ -41,7 +41,7 @@ def parse_header(header_array, USFileType=False, offset_dates=None):
     return date_keys
 
 
-def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None):
+def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, forceProcessUS=False):
     """
     The data line is composed of: SomeProvince/SomeState,SomeCountry/SomeRegion,Lat0,Long0,Day1Value,Day2Value,Day3Value
     :param data_array list: A line split already by commas
@@ -63,7 +63,7 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None):
             offset_dates = 11
     else:
         country_region = data_array[1].replace(",", "")
-        if country_region == 'US':
+        if country_region == 'US' and not forceProcessUS:
             # The data for US in this filetype are aggregated, let's skip it
             return None
         if data_array[0]:
@@ -83,7 +83,7 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None):
     return (gps_key, res)
 
 
-def parse_csv_file(fname, USFileType=False, offset_dates=None):
+def parse_csv_file(fname, USFileType=False, offset_dates=None, forceProcessUS=False):
     """
     :param fname str: The filename to parse
     :param USFileType bool: Wether we should include only US or exclude US
@@ -103,7 +103,7 @@ def parse_csv_file(fname, USFileType=False, offset_dates=None):
                 date_keys = parse_header(csv_line, USFileType, offset_dates)
             else:  # This is not the header
                 parse_result = parse_data_line(
-                    csv_line, date_keys, USFileType, offset_dates)
+                    csv_line, date_keys, USFileType=USFileType, offset_dates=offset_dates, forceProcessUS=forceProcessUS)
                 if parse_result is not None:
                     gps_key, gps_daily_data = parse_result
                     res[gps_key] = gps_daily_data
@@ -261,7 +261,7 @@ def main():
             scaled_deaths_data, date_keys))
     logging.info("Finished writing data/deaths.json")
     date_keys, global_recovered_gps_data = parse_csv_file(
-        "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", USFileType=False)
+        "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", USFileType=False, forceProcessUS=True)
     #_date_keys, us_recovered_gps_data = parse_csv_file("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_US.csv", USFileType=True)
     # There's no recovered dataset for US
     us_recovered_gps_data = dict()
