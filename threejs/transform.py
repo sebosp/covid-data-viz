@@ -178,7 +178,6 @@ def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=Tr
                     day_value = day_data["scaled"]
                     day_value_rounded = float(f"{day_value:.3f}")
                     day_total += day_data["absolute"]
-                    print("lat_lon_idx: {}", lat_lon_idx)
                     lat, lon, location = lat_lon_idx.split(",")
                     lat = float(lat)
                     lon = float(lon)
