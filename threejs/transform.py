@@ -177,18 +177,19 @@ def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=Tr
                 if day_idx == series:
                     day_value = day_data["scaled"]
                     day_value_rounded = float(f"{day_value:.3f}")
-                    day_total += day_data["absolute"]
-                    lat, lon, location = lat_lon_idx.split(",")
-                    lat = float(lat)
-                    lon = float(lon)
-                    if day_data["absolute"] > max_stats["value"]:
-                        max_stats["value"] = day_data["absolute"]
-                        max_stats["lat"] = lat
-                        max_stats["lon"] = lon
-                        max_stats["location"] = location
-                    day_array.append(lat)
-                    day_array.append(lon)
-                    day_array.append(day_value_rounded)
+                    if day_value > 0.0:
+                        day_total += day_data["absolute"]
+                        lat, lon, location = lat_lon_idx.split(",")
+                        lat = float(lat)
+                        lon = float(lon)
+                        if day_data["absolute"] > max_stats["value"]:
+                            max_stats["value"] = day_data["absolute"]
+                            max_stats["lat"] = lat
+                            max_stats["lon"] = lon
+                            max_stats["location"] = location
+                        day_array.append(lat)
+                        day_array.append(lon)
+                        day_array.append(day_value_rounded)
         logger.debug("Finished filling series")
         series_res = []
         series_stats = dict()
