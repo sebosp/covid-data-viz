@@ -1,7 +1,7 @@
 if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
-    var current_index = 81;
+    var current_index = 82;
     // By default focus the region with the max totals
     var current_stat_type = "max_total"
     var colors = [0xc62828];
@@ -89,6 +89,7 @@ if (!Detector.webgl) {
         "20-04-10",
         "20-04-11",
         "20-04-12",
+        "20-04-13",
     ];
     var container = document.getElementById("globe-container");
 
