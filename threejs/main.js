@@ -1,7 +1,7 @@
 if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
-    var current_index = 0;
+    var current_index = 81;
     // By default focus the region with the max totals
     var current_stat_type = "max_total"
     var colors = [0xc62828];
