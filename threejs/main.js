@@ -88,6 +88,7 @@ if (!Detector.webgl) {
         "20-04-09",
         "20-04-10",
         "20-04-11",
+        "20-04-12",
     ];
     var container = document.getElementById("globe-container");
 
