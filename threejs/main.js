@@ -1,7 +1,7 @@
 if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
-    var current_index = 82;
+    var current_index = 84;
     // By default focus the region with the max totals
     var current_stat_type = "max_total"
     var colors = [0xc62828];
@@ -90,6 +90,8 @@ if (!Detector.webgl) {
         "20-04-11",
         "20-04-12",
         "20-04-13",
+        "20-04-14",
+        "20-04-15",
     ];
     var container = document.getElementById("globe-container");
 
@@ -122,7 +124,7 @@ function clearData() {
 }
 
 function incrementDayBy(offset) {
-    current_index = (current_index + offset + window.data.length) % window.data.length;
+    current_index = (current_index + offset + window.data["series_stats"].length) % window.data["series_stats"].length;
     change(current_index);
 }
 
@@ -140,26 +142,53 @@ function centerLatLongWithMax() {
     //     }
     //   }
     // }, [<actual Values>]
-    dayInfo = data[current_index][0];
-    lat = dayInfo["focus"]["max_total"]["lat"]
-    lon = dayInfo["focus"]["max_total"]["lon"]
+    dayStats = window.data["series_stats"][current_index]
+    focus_stat = "max_total"
+    location_idx = dayStats[focus_stat]["location_idx"]
+    lat = window.data["locations"][location_idx]["lat"]
+    lon = window.data["locations"][location_idx]["lon"]
     // Add a bit of offset so that we can see the magnitude (z) axis
     // otherwise we are straight on top of the magnitude bar and it's not possible to see the height
-    offset = 0.1
+    offset = 0.0
     globe.target.x = (Math.PI / 2) * 3 + ((Math.PI * lon) / 180) + offset;
     globe.target.y = (((Math.PI / 2) * lat) / 90) - offset;
+}
+function datasetColor(datasetType) {
+    barColor = 0x00ff00;
+    if (datasetType == "deaths") {
+        barColor = 0xb71c1c;
+    } else if (datasetType == "confirmed") {
+        barColor = 0xe65100;
+    } else {
+        barColor = 0xc6ff00;
+    }
+    return new THREE.Color(barColor);
+}
+function loadDataForDay(day_index) {
+    var subgeo = new THREE.Geometry();
+    color = datasetColor(datasetType)
+    for (i = 0; i < window.data["locations"].length; i++) {
+        lat = window.data["locations"][i]["lat"];
+        lon = window.data["locations"][i]["lon"];
+        magnitude = window.data["locations"][i]["values"][day_index];
+        if (magnitude > 0) {
+            magnitude = magnitude * 200;
+            globe.addPoint(lat, lon, magnitude, color, subgeo);
+        }
+    }
+    globe.setBaseGeometry(subgeo)
 }
 function change(i) {
     console.log("Changing data for index:" + current_index);
     if (window.data) {
         if (i) {
-            current_index = i % window.data.length;
+            current_index = i % window.data["series_stats"].length;
         }
-        dayInfo = window.data[current_index][0]
+        dayInfo = window.data["series_stats"][current_index]
         document.getElementById("current-day").innerHTML = dayInfo["name"]
-        document.getElementById("current-stats").innerHTML = dayInfo["focus"]["max_total"]["value"] + " Total"
+        document.getElementById("current-stats").innerHTML = dayInfo["max_total"]["value"] + " Total"
         globe.resetData();
-        globe.addData(window.data[current_index][1], {format: "magnitude", datasetType: datasetType});
+        loadDataForDay(current_index)
         globe.createPoints();
         centerLatLongWithMax();
     }
@@ -173,17 +202,7 @@ function loadData(url) {
     document.body.style.backgroundImage = "url('images/loading.gif')";
     clearData();
     var xhr;
-    globe = new DAT.Globe(container, function (x) {
-        barColor = 0x00ff00;
-        if (x == "deaths") {
-            barColor = 0xb71c1c;
-        } else if (x == "confirmed") {
-            barColor = 0xe65100;
-        } else {
-            barColor = 0xc6ff00;
-        }
-        return new THREE.Color(barColor);
-    });
+    globe = new DAT.Globe(container, datasetColor);
     animate();
     TWEEN.start();
     xhr = new XMLHttpRequest();

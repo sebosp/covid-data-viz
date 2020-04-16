@@ -250,8 +250,10 @@ DAT.Globe = function (container, colorFn) {
         } else {
             this._baseGeometry = subgeo;
         }
-
     };
+    this.setBaseGeometry = function(subgeo) {
+        this._baseGeometry = subgeo;
+    }
 
     this.createPoints = function () {
         if (this._baseGeometry !== undefined) {

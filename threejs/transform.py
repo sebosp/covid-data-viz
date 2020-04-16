@@ -79,7 +79,7 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
         logger.debug("Found data %s for day: %s",
                      date_item, current_column_date)
         # Not really GPS, just lat,lon
-        res[current_column_date] = {"absolute": int(date_item)}
+        res[current_column_date] = {"absolute": int(float(date_item))}
     return (gps_key, res)
 
 
@@ -147,7 +147,7 @@ def scale_daily_values(gps_records):
     return res
 
 
-def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=True):
+def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=False):
     """
     Returns a JSON object that can be loaded into the google webgl map
       file_handle.write(generate_globe_json_string(scaled_deaths_data, date_keys))
@@ -158,49 +158,56 @@ def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=Tr
     """
     logger = logging.getLogger("generate_globe_json_string")
     logger.info("Starting creating array structs for the JSON")
-    res = []
     # First, let's scan day indexes, they will become series and be in the dropdown:
-    logger.debug("Daily series identified: %s", daily_series)
-    # Now let's push the scaled data:
-    for series in sorted(daily_series):
-        logger.debug("Starting filling series %s", series)
+    locations = []
+    series_stats = []
+    # Let's push the locations and their daily values scaled
+    for lat_lon_idx, lat_lon_data in gps_scaled_records.items():
+        lat, lon, location = lat_lon_idx.split(",")
+        lat = float(lat)
+        lon = float(lon)
         day_array = []
+        for day_idx, day_data in lat_lon_data.items():
+            day_value = day_data["scaled"]
+            day_value_rounded = float(f"{day_value:.3f}")
+            day_array.append(day_value_rounded)
+        location_struct = dict()
+        location_struct["lat"] = lat
+        location_struct["lon"] = lon
+        location_struct["location"] = location
+        location_struct["values"] = day_array
+        locations.append(location_struct)
+    # Now let's push stats for the day
+    logger.debug("Daily series identified: %s", daily_series)
+    for series in sorted(daily_series):
         day_total = 0
-        max_stats = {
-            "lat": 0,
-            "lon": 0,
+        max_total = {
             "value": 0,
-            "location": "",
+            "location_idx": 0,
         }
+        location_number = 0
         for lat_lon_idx, lat_lon_data in gps_scaled_records.items():
+            lat, lon, location = lat_lon_idx.split(",")
+            lat = float(lat)
+            lon = float(lon)
             for day_idx, day_data in lat_lon_data.items():
                 if day_idx == series:
+                    day_total += day_data["absolute"]
                     day_value = day_data["scaled"]
                     day_value_rounded = float(f"{day_value:.3f}")
-                    if day_value > 0.0:
-                        day_total += day_data["absolute"]
-                        lat, lon, location = lat_lon_idx.split(",")
-                        lat = float(lat)
-                        lon = float(lon)
-                        if day_data["absolute"] > max_stats["value"]:
-                            max_stats["value"] = day_data["absolute"]
-                            max_stats["lat"] = lat
-                            max_stats["lon"] = lon
-                            max_stats["location"] = location
-                        day_array.append(lat)
-                        day_array.append(lon)
-                        day_array.append(day_value_rounded)
-        logger.debug("Finished filling series")
-        series_res = []
-        series_stats = dict()
-        series_stats["total"] = day_total
-        series_stats["name"] = series
-        series_stats["focus"] = dict()
-        series_stats["focus"]["max_total"] = max_stats
-        series_res.append(series_stats)
-        series_res.append(day_array)
-        res.append(series_res)
-    logger.info("Finished creating array structs for the JSON")
+                    if day_data["absolute"] > max_total["value"]:
+                        max_total["value"] = day_data["absolute"]
+                        max_total["location_idx"] = location_number
+            location_number += 1
+        day_stats = dict()
+        day_stats["total"] = day_total
+        day_stats["name"] = series
+        day_stats["max_total"] = max_total
+        series_stats.append(day_stats)
+    logger.info("Finished calculations for JSON structure")
+    res = dict()
+    res["locations"] = locations
+    res["series_stats"] = series_stats
     if pretty_print:
         return json.dumps(res, sort_keys=True, indent=2)
     else:
@@ -234,9 +241,10 @@ def print_current_info_div(gps_scaled_records, daily_series):
         js_day_array.append("'{}'".format(series))
     print("var days = [{}];".format(",".join(js_day_array)))
 
-
-def main():
-    logging.basicConfig(level=logging.INFO)
+def process_confirmed():
+    """
+    Processes the global confirmed file
+    """
     date_keys, global_confirmed_gps_data = parse_csv_file(
         "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", USFileType=False)
     _date_keys, us_confirmed_gps_data = parse_csv_file(
@@ -249,6 +257,11 @@ def main():
         file_handle.write(generate_globe_json_string(
             scaled_confirmed_data, date_keys))
     logging.info("Finished writing data/confirmed.json")
+
+def process_deaths():
+    """
+    Processes the global confirmed file
+    """
     date_keys, global_deaths_gps_data = parse_csv_file(
         "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv", USFileType=False)
     _date_keys, us_deaths_gps_data = parse_csv_file(
@@ -261,6 +274,8 @@ def main():
         file_handle.write(generate_globe_json_string(
             scaled_deaths_data, date_keys))
     logging.info("Finished writing data/deaths.json")
+
+def process_recovered():
     date_keys, global_recovered_gps_data = parse_csv_file(
         "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", USFileType=False, forceProcessUS=True)
     #_date_keys, us_recovered_gps_data = parse_csv_file("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_US.csv", USFileType=True)
@@ -275,6 +290,11 @@ def main():
             scaled_recovered_data, date_keys))
     logging.info("Finished writing data/recovered.json")
 
+def main():
+    logging.basicConfig(level=logging.INFO)
+    process_confirmed()
+    process_deaths()
+    process_recovered()
 
 if __name__ == "__main__":
     main()
