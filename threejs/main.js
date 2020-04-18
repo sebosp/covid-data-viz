@@ -9,6 +9,10 @@ if (!Detector.webgl) {
 
     var globe;
 
+    // Add a bit of offset so that we can see the magnitude (z) axis when we use the automatic globe positioning
+    // otherwise we are straight on top of the magnitude bar and it's not possible to see the height
+    var target_offset = 0.0
+
     document.addEventListener('DOMContentLoaded', function () {
         var elems = document.querySelectorAll('.datepicker');
         var instances = M.Datepicker.init(elems,
@@ -40,6 +44,21 @@ function incrementDayBy(offset) {
     change(current_index);
 }
 
+function translateGlobeTargetToLatLng() {
+    return {
+        lat: ((globe.target.y + target_offset) * 90) / (Math.PI / 2),
+        lng: ((globe.target.x - target_offset - ((Math.PI / 2) * 3)) * 180) / Math.PI,
+    }
+}
+
+function translateLatLngToGlobeTarget(lat, lng) {
+    // Translates from Latitude,Longitude to the coordinates of the globe camera
+    return {
+        x: (Math.PI / 2) * 3 + ((Math.PI * lon) / 180) + target_offset,
+        y: (((Math.PI / 2) * lat) / 90) - target_offset,
+    }
+}
+
 function centerLatLongWithMax() {
     // Data contains an array with:
     // [ {
@@ -59,11 +78,9 @@ function centerLatLongWithMax() {
     location_idx = dayStats[focus_stat]["location_idx"]
     lat = window.data["locations"][location_idx]["lat"]
     lon = window.data["locations"][location_idx]["lon"]
-    // Add a bit of offset so that we can see the magnitude (z) axis
-    // otherwise we are straight on top of the magnitude bar and it's not possible to see the height
-    offset = 0.0
-    globe.target.x = (Math.PI / 2) * 3 + ((Math.PI * lon) / 180) + offset;
-    globe.target.y = (((Math.PI / 2) * lat) / 90) - offset;
+    globe_x_y = translateLatLngToGlobeTarget(lat, lon)
+    globe.target.x = globe_x_y.x
+    globe.target.y = globe_x_y.y
 }
 function datasetColor(datasetType) {
     barColor = 0x00ff00;
