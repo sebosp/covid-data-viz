@@ -3,7 +3,7 @@ if (!Detector.webgl) {
 } else {
     var current_index = 84;
     // By default focus the region with the max totals
-    var current_stat_type = "max_total"
+    var current_stat_type = "top_cummulative"
     var colors = [0xc62828];
     var container = document.getElementById("globe-container");
 
@@ -60,21 +60,26 @@ function translateLatLngToGlobeTarget(lat, lng) {
 }
 
 function centerLatLongWithMax() {
-    // Data contains an array with:
-    // [ {
-    //   total: x,
-    //   name: "series_name",
-    //   focus: {
-    //     max_total: {
-    //       value: y,
-    //       lat: lat,
-    //       lon: lon,
-    //       location: "Country, Location"
-    //     }
-    //   }
-    // }, [<actual Values>]
+    // {"locations": [{
+    //     "lat": 10,
+    //     "lon": 4.9,
+    //     "location": "China - Hubei",
+    //     "values": [
+    //         0.0,
+    //         5.5
+    //     ]
+    //     }]
+    // },
+    // "series_stats": [{
+    //     "name": "20-01-22",
+    //     "top_cummulative": {
+    //         "location_idx": 0,
+    //         "value": 444
+    //     },
+    //     "total": 555
+    // }]}
     dayStats = window.data["series_stats"][current_index]
-    focus_stat = "max_total"
+    focus_stat = "top_cummulative"
     location_idx = dayStats[focus_stat]["location_idx"]
     lat = window.data["locations"][location_idx]["lat"]
     lon = window.data["locations"][location_idx]["lon"]
@@ -115,7 +120,7 @@ function change(i) {
         }
         dayInfo = window.data["series_stats"][current_index]
         document.getElementById("current-day").innerHTML = dayInfo["name"]
-        document.getElementById("current-stats").innerHTML = dayInfo["max_total"]["value"] + " Total"
+        document.getElementById("current-stats").innerHTML = dayInfo["top_cummulative"]["value"] + " Total"
         globe.resetData();
         loadDataForDay(current_index)
         globe.createPoints();

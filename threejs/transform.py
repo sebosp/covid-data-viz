@@ -46,9 +46,10 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
     The data line is composed of: SomeProvince/SomeState,SomeCountry/SomeRegion,Lat0,Long0,Day1Value,Day2Value,Day3Value
     :param data_array list: A line split already by commas
     :param date_keys list: A list of dates to fill from the data array
-    :param USFileType bool: Wether we should include only US or exclude US
+    :param USFileType bool: Mark the records as being from either US filetype or not
     :param offset_dates int: override the default calculation of offset_dates
-    :returns tuple: ("Lat,Long", [{"Year-Mothh-Day":{"absolute": DayValue}},{}])
+    :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
+    :returns tuple: ("Lat,Long,Country - Region,True,True", [{"Year-Mothh-Day":{"absolute": DayValue}},{}])
     """
     res = dict()
     logger = logging.getLogger("parse_data_line")
@@ -63,9 +64,6 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
             offset_dates = 11
     else:
         country_region = data_array[1].replace(",", "")
-        if country_region == 'US' and not forceProcessUS:
-            # The data for US in this filetype are aggregated, let's skip it
-            return None
         if data_array[0]:
             country_region = "{} - {}".format(country_region,
                                               data_array[0].replace(",", ""))
@@ -73,7 +71,8 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
         lon = data_array[3]
         if offset_dates is None:
             offset_dates = 4
-    gps_key = "{},{},{}".format(lat, lon, country_region)
+    gps_key = "{},{},{},{},{}".format(
+        lat, lon, country_region, USFileType, forceProcessUS)
     for date_idx, date_item in enumerate(data_array[offset_dates:]):
         current_column_date = date_keys[date_idx]
         logger.debug("Found data %s for day: %s",
@@ -86,8 +85,9 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
 def parse_csv_file(fname, USFileType=False, offset_dates=None, forceProcessUS=False):
     """
     :param fname str: The filename to parse
-    :param USFileType bool: Wether we should include only US or exclude US
+    :param USFileType bool: Mark the records as being from either US filetype or not
     :param offset_dates int: override the default calculation of offset_dates
+    :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
     :returns tuple like (["date1","date2"]{"lat,long":[{"2020-02-01":{"absolute": 100}}])
     """
     logger = logging.getLogger("parse_csv_file")
@@ -102,11 +102,13 @@ def parse_csv_file(fname, USFileType=False, offset_dates=None, forceProcessUS=Fa
             if lineno == 0:
                 date_keys = parse_header(csv_line, USFileType, offset_dates)
             else:  # This is not the header
-                parse_result = parse_data_line(
-                    csv_line, date_keys, USFileType=USFileType, offset_dates=offset_dates, forceProcessUS=forceProcessUS)
-                if parse_result is not None:
-                    gps_key, gps_daily_data = parse_result
-                    res[gps_key] = gps_daily_data
+                gps_key, gps_daily_data = parse_data_line(
+                    csv_line,
+                    date_keys,
+                    USFileType=USFileType,
+                    offset_dates=offset_dates,
+                    forceProcessUS=forceProcessUS)
+                res[gps_key] = gps_daily_data
     logger.info("Finished parsing file")
     return (date_keys, res)
 
@@ -141,9 +143,35 @@ def scale_daily_values(gps_records):
             day_value_int = int(day_data["absolute"])
             scaled_value = day_value_int / max_value
             res[gps_location][day_idx] = {
-                "scaled": scaled_value, "absolute": day_value_int}
+                "scaled": scaled_value,
+                "absolute": day_value_int}
             #logger.debug("Scaled %s to %s", day_data, scaled_value)
     logger.info("Finished scaling values")
+    return res
+
+
+def get_stats_for_day(gps_scaled_records, series_key):
+    """
+    Returns a dict with collected stats for a given day.
+    :param gps_scaled_records dict: The per-day gps records with their scaled values
+    :param series_key: The 0 indexed day from the start of our dataset
+    :returns: dict with {"top_cummulative": {"value": X, "location_idx": Y}, "total": Z}
+    """
+    res = dict()
+    res["name"] = series_key
+    res["top_cummulative"] = dict()
+    res["top_cummulative"]["value"] = 0
+    res["top_cummulative"]["location_idx"] = 0
+    day_total = 0
+    location_number = 0
+    for _lat_lon_key, lat_lon_data in gps_scaled_records.items():
+        for day_key, day_data in lat_lon_data.items():
+            if day_key == series_key:
+                day_total += day_data["absolute"]
+                if day_data["absolute"] > res["top_cummulative"]["value"]:
+                    res["top_cummulative"]["value"] = day_data["absolute"]
+                    res["top_cummulative"]["location_idx"] = location_number
+        location_number += 1
     return res
 
 
@@ -162,15 +190,20 @@ def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=Fa
     locations = []
     series_stats = []
     # Let's push the locations and their daily values scaled
-    for lat_lon_idx, lat_lon_data in gps_scaled_records.items():
-        lat, lon, location = lat_lon_idx.split(",")
+    for lat_lon_key, lat_lon_data in gps_scaled_records.items():
+        lat, lon, location, USFileType, forceProcessUS = lat_lon_key.split(",")
         lat = float(lat)
         lon = float(lon)
         day_array = []
-        for day_idx, day_data in lat_lon_data.items():
+        for _day_key, day_data in lat_lon_data.items():
             day_value = day_data["scaled"]
             day_value_rounded = float(f"{day_value:.3f}")
-            day_array.append(day_value_rounded)
+            if USFileType == "False" and location == "US" and forceProcessUS == "False":
+                # The data for US in this filetype is aggregated, let's skip it to avoid counting twice
+                # Because we are using indexes, let's append 0.0 to keep consistency instead of a missing index
+                day_array.append(0.0)
+            else:
+                day_array.append(day_value_rounded)
         location_struct = dict()
         location_struct["lat"] = lat
         location_struct["lon"] = lon
@@ -180,29 +213,7 @@ def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=Fa
     # Now let's push stats for the day
     logger.debug("Daily series identified: %s", daily_series)
     for series in sorted(daily_series):
-        day_total = 0
-        max_total = {
-            "value": 0,
-            "location_idx": 0,
-        }
-        location_number = 0
-        for lat_lon_idx, lat_lon_data in gps_scaled_records.items():
-            lat, lon, location = lat_lon_idx.split(",")
-            lat = float(lat)
-            lon = float(lon)
-            for day_idx, day_data in lat_lon_data.items():
-                if day_idx == series:
-                    day_total += day_data["absolute"]
-                    day_value = day_data["scaled"]
-                    day_value_rounded = float(f"{day_value:.3f}")
-                    if day_data["absolute"] > max_total["value"]:
-                        max_total["value"] = day_data["absolute"]
-                        max_total["location_idx"] = location_number
-            location_number += 1
-        day_stats = dict()
-        day_stats["total"] = day_total
-        day_stats["name"] = series
-        day_stats["max_total"] = max_total
+        day_stats = get_stats_for_day(gps_scaled_records, series)
         series_stats.append(day_stats)
     logger.info("Finished calculations for JSON structure")
     res = dict()
@@ -241,6 +252,7 @@ def print_current_info_div(gps_scaled_records, daily_series):
         js_day_array.append("'{}'".format(series))
     print("var days = [{}];".format(",".join(js_day_array)))
 
+
 def process_confirmed():
     """
     Processes the global confirmed file
@@ -257,6 +269,7 @@ def process_confirmed():
         file_handle.write(generate_globe_json_string(
             scaled_confirmed_data, date_keys))
     logging.info("Finished writing data/confirmed.json")
+
 
 def process_deaths():
     """
@@ -275,6 +288,7 @@ def process_deaths():
             scaled_deaths_data, date_keys))
     logging.info("Finished writing data/deaths.json")
 
+
 def process_recovered():
     date_keys, global_recovered_gps_data = parse_csv_file(
         "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", USFileType=False, forceProcessUS=True)
@@ -290,11 +304,13 @@ def process_recovered():
             scaled_recovered_data, date_keys))
     logging.info("Finished writing data/recovered.json")
 
+
 def main():
     logging.basicConfig(level=logging.INFO)
     process_confirmed()
     process_deaths()
     process_recovered()
+
 
 if __name__ == "__main__":
     main()

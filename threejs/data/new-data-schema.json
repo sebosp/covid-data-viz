@@ -10,7 +10,7 @@
 },
 "series_stats": [{
     "name": "20-01-22",
-    "max_total": {
+    "max_cummulative": {
         "location_idx": 0,
         "value": 444
     },
