@@ -4,6 +4,10 @@ This file transforms
 https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv
 into the expected format for the webgl map:
 https://github.com/dataarts/webgl-globe#data-format
+
+TODO:
+    - If the date keys from several files do not match and they are joined, the data doesn't make sense.
+      We should find a way to find consistency between datasets to avoid this confusion.
 """
 
 import logging
@@ -145,7 +149,8 @@ def scale_daily_values(gps_records):
             res[gps_location][day_idx] = {
                 "scaled": scaled_value,
                 "absolute": day_value_int}
-            #logger.debug("Scaled %s to %s", day_data, scaled_value)
+            # if scaled_value > 0:
+            #logger.info("Scaled %s to %s", day_data["absolute"], scaled_value)
     logger.info("Finished scaling values")
     return res
 
@@ -164,14 +169,21 @@ def get_stats_for_day(gps_scaled_records, series_key):
     res["top_cummulative"]["location_idx"] = 0
     day_total = 0
     location_number = 0
-    for _lat_lon_key, lat_lon_data in gps_scaled_records.items():
+    for lat_lon_key, lat_lon_data in gps_scaled_records.items():
+        _lat, _lon, location, USFileType, forceProcessUS = lat_lon_key.split(
+            ",")
         for day_key, day_data in lat_lon_data.items():
             if day_key == series_key:
-                day_total += day_data["absolute"]
+                if USFileType == "False" and location == "US" and forceProcessUS == "False":
+                    logging.debug("Ignoring stat for day: %s location: %s, USFileType: %s, forceProcessUS: %s",
+                                  day_key, location, USFileType, forceProcessUS)
+                else:
+                    day_total += day_data["absolute"]
                 if day_data["absolute"] > res["top_cummulative"]["value"]:
                     res["top_cummulative"]["value"] = day_data["absolute"]
                     res["top_cummulative"]["location_idx"] = location_number
         location_number += 1
+    res["global_total"] = day_total
     return res
 
 
@@ -195,15 +207,22 @@ def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=Fa
         lat = float(lat)
         lon = float(lon)
         day_array = []
-        for _day_key, day_data in lat_lon_data.items():
-            day_value = day_data["scaled"]
-            day_value_rounded = float(f"{day_value:.3f}")
+        for day_key in sorted(lat_lon_data.keys()):
+            day_data = lat_lon_data[day_key]
+            scaled_value = day_data["scaled"]
             if USFileType == "False" and location == "US" and forceProcessUS == "False":
-                # The data for US in this filetype is aggregated, let's skip it to avoid counting twice
-                # Because we are using indexes, let's append 0.0 to keep consistency instead of a missing index
-                day_array.append(0.0)
+                # The data for US in this filetype is aggregated, let's not draw it twice
+                # Because we are using indexes, let's set  scaled to 0.0 to keep consistency instead of a missing index
+                day_array.append({
+                    "scaled": 0,
+                    "absolute": day_data["absolute"],
+                })
             else:
-                day_array.append(day_value_rounded)
+                # Let's rounde the day value by 3 floats to reduce json file size
+                day_array.append({
+                    "scaled": float(f"{scaled_value:.3f}"),
+                    "absolute": day_data["absolute"]
+                })
         location_struct = dict()
         location_struct["lat"] = lat
         location_struct["lon"] = lon

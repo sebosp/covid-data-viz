@@ -54,8 +54,15 @@ function translateGlobeTargetToLatLng() {
 function translateLatLngToGlobeTarget(lat, lng) {
     // Translates from Latitude,Longitude to the coordinates of the globe camera
     return {
-        x: (Math.PI / 2) * 3 + ((Math.PI * lon) / 180) + target_offset,
+        x: (Math.PI / 2) * 3 + ((Math.PI * lng) / 180) + target_offset,
         y: (((Math.PI / 2) * lat) / 90) - target_offset,
+    }
+}
+
+function updateCountryD3Graph(location_idx){
+    d3_data = Array()
+    for (i=0; i < window.data["locations"][location_idx]["location"]["values"].length; i++){
+        d3_data.push(window.data["locations"][location_idx]["location"]["values"][i]["absolute"])
     }
 }
 
@@ -65,8 +72,8 @@ function centerLatLongWithMax() {
     //     "lon": 4.9,
     //     "location": "China - Hubei",
     //     "values": [
-    //         0.0,
-    //         5.5
+    //         { "scaled": 0.0, "absolute": 0},
+    //         { "scaled": 5.5, "absolute": 25},
     //     ]
     //     }]
     // },
@@ -79,13 +86,15 @@ function centerLatLongWithMax() {
     //     "total": 555
     // }]}
     dayStats = window.data["series_stats"][current_index]
-    focus_stat = "top_cummulative"
-    location_idx = dayStats[focus_stat]["location_idx"]
+    location_idx = dayStats[current_stat_type]["location_idx"]
     lat = window.data["locations"][location_idx]["lat"]
     lon = window.data["locations"][location_idx]["lon"]
-    globe_x_y = translateLatLngToGlobeTarget(lat, lon)
-    globe.target.x = globe_x_y.x
-    globe.target.y = globe_x_y.y
+    location_name = window.data["locations"][location_idx]["location"]
+    document.getElementById("focus-region").innerHTML = location_name
+    document.getElementById("focus-region-day").innerHTML = window.data["locations"][location_idx]["values"][current_index]["absolute"] + ' cases'
+    globe_center_x_y = translateLatLngToGlobeTarget(lat, lon)
+    globe.target.x = globe_center_x_y.x
+    globe.target.y = globe_center_x_y.y
 }
 function datasetColor(datasetType) {
     barColor = 0x00ff00;
@@ -98,13 +107,14 @@ function datasetColor(datasetType) {
     }
     return new THREE.Color(barColor);
 }
-function loadDataForDay(day_index) {
+function loadDataForDay() {
+    console.log("loadDataForDay" + current_index);
     var subgeo = new THREE.Geometry();
     color = datasetColor(datasetType)
     for (i = 0; i < window.data["locations"].length; i++) {
         lat = window.data["locations"][i]["lat"];
         lon = window.data["locations"][i]["lon"];
-        magnitude = window.data["locations"][i]["values"][day_index];
+        magnitude = window.data["locations"][i]["values"][current_index]["scaled"];
         if (magnitude > 0) {
             magnitude = magnitude * 200;
             globe.addPoint(lat, lon, magnitude, color, subgeo);
@@ -120,9 +130,9 @@ function change(i) {
         }
         dayInfo = window.data["series_stats"][current_index]
         document.getElementById("current-day").innerHTML = dayInfo["name"]
-        document.getElementById("current-stats").innerHTML = dayInfo["top_cummulative"]["value"] + " Total"
+        document.getElementById("current-stats").innerHTML = dayInfo["global_total"] + " Global"
         globe.resetData();
-        loadDataForDay(current_index)
+        loadDataForDay()
         globe.createPoints();
         centerLatLongWithMax();
     }

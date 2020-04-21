@@ -21,7 +21,7 @@ class TestParsing(unittest.TestCase):
         data_array = "Province,Country,0,80,1,5".split(",")
         gps_key, parsed_daily_data = transform.parse_data_line(
             data_array, header_dates)
-        self.assertEqual(gps_key, "0,80,Country - Province")
+        self.assertEqual(gps_key, "0,80,Country - Province,False,False")
         first_day_record = parsed_daily_data.get("20-01-22")
         self.assertIsNotNone(first_day_record)
         self.assertEqual(first_day_record, {"absolute": 1})
@@ -40,7 +40,7 @@ class TestParsing(unittest.TestCase):
     def test_scale_daily_values(self):
         test_data = self.test_parse_data()
         scaled_data = transform.scale_daily_values(test_data)
-        gps_record = scaled_data.get("0,80,Country - Province")
+        gps_record = scaled_data.get("0,80,Country - Province,False,False")
         self.assertIsNotNone(gps_record)
         first_day_data = gps_record.get("20-01-22")
         self.assertEqual(first_day_data, {"scaled": 0.2, "absolute": 1})
@@ -53,7 +53,7 @@ class TestParsing(unittest.TestCase):
         scaled_data = transform.scale_daily_values(test_data)
         globe_json = transform.generate_globe_json_string(
             scaled_data, header_dates, pretty_print=False)
-        self.assertEqual(globe_json, '[[{"total": 5, "name": "20-01-01", "focus": {"max_total": {"lat": 0.0, "lon": 80.0, "value": 5, "location": "Country - Province"}}}, [0.0, 80.0, 1.0]], [{"total": 1, "name": "20-01-22", "focus": {"max_total": {"lat": 0.0, "lon": 80.0, "value": 1, "location": "Country - Province"}}}, [0.0, 80.0, 0.2]]]')
+        self.assertEqual(globe_json, '{"locations": [{"lat": 0.0, "lon": 80.0, "location": "Country - Province", "values": [{"scaled": 1.0, "absolute": 5}, {"scaled": 0.2, "absolute": 1}]}], "series_stats": [{"name": "20-01-01", "top_cummulative": {"value": 5, "location_idx": 0}}, {"name": "20-01-22", "top_cummulative": {"value": 1, "location_idx": 0}}]}')
 
     def test_merge_gps_records(self):
         lhs_data = self.test_parse_data()
@@ -64,12 +64,12 @@ class TestParsing(unittest.TestCase):
         rhs_data = dict()
         rhs_data[gps_key] = parsed_daily_data
         merged_records = transform.merge_gps_records(lhs_data, rhs_data)
-        first_data = merged_records.get("0,80,Country - Province")
+        first_data = merged_records.get("0,80,Country - Province,False,False")
         self.assertIsNotNone(first_data)
-        self.assertEqual(first_data, lhs_data.get("0,80,Country - Province"))
-        second_data = merged_records.get("10,5,Country - Province")
+        self.assertEqual(first_data, lhs_data.get("0,80,Country - Province,False,False"))
+        second_data = merged_records.get("10,5,Country - Province,False,False")
         self.assertIsNotNone(second_data)
-        self.assertEqual(second_data, rhs_data.get("10,5,Country - Province"))
+        self.assertEqual(second_data, rhs_data.get("10,5,Country - Province,False,False"))
 
 
 if __name__ == '__main__':
