@@ -34,12 +34,35 @@
             position: absolute;
             bottom: 0px;
             left: 0px;
-            width: 10%;
+            width: 25%;
+            background-color: none;
+            height: 32%;
+            pointer-events: none;
+            border-color: #b2fef7;
+            border-radius: 25px;
+            border-style: solid;
+            border-width: 1px;
+        }
+
+        #focus-region {
+            color: #fff;
+            margin: auto;
+            text-align: center;
+        }
+
+        #focus-region-day {
+            color: #fff;
+            margin: auto;
         }
     </style>
     <!--Import Google Icon Font-->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script type="text/javascript" src="third-party/Detector.js"></script>
+    <script type="text/javascript" src="third-party/three.min.js"></script>
+    <script type="text/javascript" src="third-party/Tween.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3-array.v2.min.js"></script>
 </head>
 
 <body>
@@ -76,7 +99,12 @@
         </div>
     </header>
     <div id="globe-container"></div>
-    <div id="focus-container"></div>
+    <div class="teal darken-4" id="focus-container">
+        <div id="focus-region">
+        </div>
+        <div id="region-graph">
+        </div>
+    </div>
     <div id="scope-container">
         <svg style="height:100%;width:100%" pointer-events="none">
             <circle stroke="gray" stroke-opacity="0.5" pointer-events="none" cy="50%" cx="50%" r="2%" fill="none"
@@ -94,9 +122,6 @@
          </div>
        </div>
      </footer> Breaking the page, gotta fix -->
-    <script type="text/javascript" src="third-party/Detector.js"></script>
-    <script type="text/javascript" src="third-party/three.min.js"></script>
-    <script type="text/javascript" src="third-party/Tween.js"></script>
     <script type="text/javascript" src="globe.js"></script>
     <script type="text/javascript" src="main.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>

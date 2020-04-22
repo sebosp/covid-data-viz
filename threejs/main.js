@@ -7,6 +7,9 @@ if (!Detector.webgl) {
     var colors = [0xc62828];
     var container = document.getElementById("globe-container");
 
+    var chartWidth = 200
+    var chartHeight = 200
+    var chartMargin = ({top: 20, right: 20, bottom: 30, left: 50})
     var globe;
 
     // Add a bit of offset so that we can see the magnitude (z) axis when we use the automatic globe positioning
@@ -59,11 +62,81 @@ function translateLatLngToGlobeTarget(lat, lng) {
     }
 }
 
-function updateCountryD3Graph(location_idx){
-    d3_data = Array()
-    for (i=0; i < window.data["locations"][location_idx]["location"]["values"].length; i++){
-        d3_data.push(window.data["locations"][location_idx]["location"]["values"][i]["absolute"])
+function updateCountryD3Graph(location_idx) {
+    var myNode = document.getElementById("region-graph");
+    while (myNode.firstChild) {
+        myNode.removeChild(myNode.firstChild);
     }
+    d3_data = Array()
+    columns = window.data["series_stats"].map(d => d.name);
+    d3_data = {
+        y: "Number of Cases",
+        series: [
+            {
+                name: window.data["locations"][location_idx]["location"],
+                values: window.data["locations"][location_idx]["values"].map(d => d["absolute"]),
+            }
+        ],
+        dates: columns.map(d3.utcParse("%y-%m-%d"))
+    };
+    x = d3.scaleUtc()
+        .domain(d3.extent(d3_data.dates))
+        .range([chartMargin.left, chartWidth - chartMargin.right])
+    y = d3.scaleLinear()
+        .domain([0, d3.max(d3_data.series, d => d3.max(d.values))]).nice()
+        .range([chartHeight - chartMargin.bottom, chartMargin.top])
+    xAxis = g => g
+        .attr("transform", `translate(0,${chartHeight - chartMargin.bottom})`)
+        .call(d3.axisBottom(x).ticks(chartWidth / 80).tickSizeOuter(0))
+    yAxis = g => g
+        .attr("transform", `translate(${chartMargin.left},0)`)
+        .call(d3.axisLeft(y))
+        .call(g => g.select(".domain").remove())
+        .call(g => g.select(".tick:last-of-type text").clone()
+            .attr("x", 3)
+            .attr("text-anchor", "start")
+            .attr("font-weight", "bold")
+            .text(d3_data.y))
+    line = d3.line()
+        .defined(d => !isNaN(d))
+        .x((_d, i) => x(d3_data.dates[i]))
+        .y(d => y(d));
+    console.log("Creating SVG");
+    const svg = d3.select("#region-graph")
+        .append("div")
+        // Container class to make it responsive.
+        .classed("svg-container", true)
+        .append("svg")
+        // Responsive SVG needs these 2 attributes and no width and height attr.
+        //.attr("viewBox", "0 0 600 400")
+        // Class to make it responsive.
+        .classed("svg-content-responsive", true)
+        // Fill with a rectangle for visualization.
+        .attr("viewBox", [0, 0, chartWidth, chartHeight])
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .style("overflow", "visible");
+
+    svg.append("g")
+        .call(xAxis);
+
+    svg.append("g")
+        .call(yAxis);
+
+    svg.append("g")
+        .attr("fill", "none")
+        .attr("stroke", "#" + datasetColor(datasetType).getHexString())
+        .attr("stroke-chartWidth", 1.5)
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-linecap", "round")
+        .selectAll("path")
+        .data(d3_data.series)
+        .join("path")
+        .style("mix-blend-mode", "multiply")
+        .attr("d", d => line(d.values));
+
+
+    svg.node();
+
 }
 
 function centerLatLongWithMax() {
@@ -90,11 +163,12 @@ function centerLatLongWithMax() {
     lat = window.data["locations"][location_idx]["lat"]
     lon = window.data["locations"][location_idx]["lon"]
     location_name = window.data["locations"][location_idx]["location"]
-    document.getElementById("focus-region").innerHTML = location_name
-    document.getElementById("focus-region-day").innerHTML = window.data["locations"][location_idx]["values"][current_index]["absolute"] + ' cases'
-    globe_center_x_y = translateLatLngToGlobeTarget(lat, lon)
-    globe.target.x = globe_center_x_y.x
-    globe.target.y = globe_center_x_y.y
+    document.getElementById("focus-region").innerHTML = location_name + ' - ' + window.data["locations"][location_idx]["values"][current_index]["absolute"] + ' cases'
+    globe_center_x_y = translateLatLngToGlobeTarget(lat, lon);
+    globe.target.x = globe_center_x_y.x;
+    globe.target.y = globe_center_x_y.y;
+    updateCountryD3Graph(location_idx);
+
 }
 function datasetColor(datasetType) {
     barColor = 0x00ff00;
