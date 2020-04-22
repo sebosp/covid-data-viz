@@ -204,8 +204,12 @@ def generate_globe_json_string(gps_scaled_records, daily_series, pretty_print=Fa
     # Let's push the locations and their daily values scaled
     for lat_lon_key, lat_lon_data in gps_scaled_records.items():
         lat, lon, location, USFileType, forceProcessUS = lat_lon_key.split(",")
-        lat = float(lat)
-        lon = float(lon)
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except:
+            logger.error("Unable to parse lat/lon on key %s", lat_lon_key)
+            continue
         day_array = []
         for day_key in sorted(lat_lon_data.keys()):
             day_data = lat_lon_data[day_key]
