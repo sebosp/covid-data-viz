@@ -79,18 +79,18 @@ function updateCountryD3Graph(location_idx) {
         ],
         dates: columns.map(d3.utcParse("%y-%m-%d"))
     };
-    x = d3.scaleUtc()
+    xScale = d3.scaleUtc()
         .domain(d3.extent(d3_data.dates))
         .range([chartMargin.left, chartWidth - chartMargin.right])
-    y = d3.scaleLinear()
+    yScale = d3.scaleLinear()
         .domain([0, d3.max(d3_data.series, d => d3.max(d.values))]).nice()
         .range([chartHeight - chartMargin.bottom, chartMargin.top])
     xAxis = g => g
         .attr("transform", `translate(0,${chartHeight - chartMargin.bottom})`)
-        .call(d3.axisBottom(x).ticks(chartWidth / 80).tickSizeOuter(0))
+        .call(d3.axisBottom(xScale).ticks(chartWidth / 80).tickSizeOuter(0))
     yAxis = g => g
         .attr("transform", `translate(${chartMargin.left},0)`)
-        .call(d3.axisLeft(y))
+        .call(d3.axisLeft(yScale))
         .call(g => g.select(".domain").remove())
         .call(g => g.select(".tick:last-of-type text").clone()
             .attr("x", 3)
@@ -99,8 +99,8 @@ function updateCountryD3Graph(location_idx) {
             .text(d3_data.y))
     line = d3.line()
         .defined(d => !isNaN(d))
-        .x((_d, i) => x(d3_data.dates[i]))
-        .y(d => y(d));
+        .x((_d, i) => xScale(d3_data.dates[i]))
+        .y(d => yScale(d));
     console.log("Creating SVG");
     const svg = d3.select("#region-graph")
         .append("div")
@@ -134,8 +134,16 @@ function updateCountryD3Graph(location_idx) {
         .style("mix-blend-mode", "multiply")
         .attr("d", d => line(d.values));
 
-
-    svg.node();
+    dayInfo = window.data["series_stats"][current_index]
+    cutoffDate = d3.utcParse("%y-%m-%d")(dayInfo["name"])
+    svg.append("line")
+        .style("stroke", "white")
+        .style("stroke-dasharray", "2px")
+        .style("stroke-opacity", "0.5")
+        .attr("x1", xScale(cutoffDate))
+        .attr("x2", xScale(cutoffDate))
+        .attr("y1", yScale.range()[0])
+        .attr("y2", yScale.range()[1] + yScale.range()[1]/10);
 
 }
 
