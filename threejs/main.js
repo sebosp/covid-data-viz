@@ -4,12 +4,13 @@ if (!Detector.webgl) {
     var current_index = 84;
     // By default focus the region with the max totals
     var current_stat_type = "top_cummulative"
+    var autofocus = true;
     var colors = [0xc62828];
     var container = document.getElementById("globe-container");
 
     var chartWidth = 200
     var chartHeight = 200
-    var chartMargin = ({top: 20, right: 20, bottom: 30, left: 50})
+    var chartMargin = ({top: 20, right: 20, bottom: 25, left: 50})
     var globe;
 
     // Add a bit of offset so that we can see the magnitude (z) axis when we use the automatic globe positioning
@@ -30,6 +31,11 @@ if (!Detector.webgl) {
     changeDataSet();
 }
 
+function toggleAutoFocus(){
+    autofocus = ! autofocus;
+    document.getElementById("autofocus").innerHTML = autofocus ? "center_focus_strong" : "center_focus_weak";
+
+}
 function changeDataFromDatePicker(newDate) {
     console.log("changeDataFromDatePicker")
     console.log(newDate)
@@ -63,6 +69,7 @@ function translateLatLngToGlobeTarget(lat, lng) {
 }
 
 function updateCountryD3Graph(location_idx) {
+    console.log("Updating Coutry D3 Graph: ", location_idx);
     var myNode = document.getElementById("region-graph");
     while (myNode.firstChild) {
         myNode.removeChild(myNode.firstChild);
@@ -148,6 +155,9 @@ function updateCountryD3Graph(location_idx) {
 }
 
 function centerLatLongWithMax() {
+    if (! autofocus) {
+        return
+    }
     // {"locations": [{
     //     "lat": 10,
     //     "lon": 4.9,
