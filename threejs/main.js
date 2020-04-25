@@ -31,16 +31,27 @@ if (!Detector.webgl) {
     changeDataSet();
 }
 
-function toggleAutoFocus(){
-    autofocus = ! autofocus;
+function toggleAutoFocus() {
+    autofocus = !autofocus;
     document.getElementById("autofocus").innerHTML = autofocus ? "center_focus_strong" : "center_focus_weak";
-
 }
+
+function toggleStatType() {
+    if (current_stat_type == "top_cummulative"){
+        current_stat_type = "top_delta"
+        document.getElementById("stat_type").innerHTML = "change_history"
+    } else {
+        current_stat_type = "top_cummulative"
+        document.getElementById("stat_type").innerHTML = "present_to_all"
+    }
+}
+
 function changeDataFromDatePicker(newDate) {
     console.log("changeDataFromDatePicker")
     console.log(newDate)
 
 }
+
 function clearData() {
     var myNode = document.getElementById("globe-container");
     while (myNode.firstChild) {
@@ -69,6 +80,7 @@ function translateLatLngToGlobeTarget(lat, lng) {
 }
 
 function updateCountryD3Graph(location_idx) {
+    // TODO: Use delta here
     console.log("Updating Coutry D3 Graph: ", location_idx);
     var myNode = document.getElementById("region-graph");
     while (myNode.firstChild) {
@@ -81,7 +93,7 @@ function updateCountryD3Graph(location_idx) {
         series: [
             {
                 name: window.data["locations"][location_idx]["location"],
-                values: window.data["locations"][location_idx]["values"].map(d => d["absolute"]),
+                values: window.data["locations"][location_idx]["values"].map(d => d["abs"]),
             }
         ],
         dates: columns.map(d3.utcParse("%y-%m-%d"))
@@ -150,12 +162,12 @@ function updateCountryD3Graph(location_idx) {
         .attr("x1", xScale(cutoffDate))
         .attr("x2", xScale(cutoffDate))
         .attr("y1", yScale.range()[0])
-        .attr("y2", yScale.range()[1] + yScale.range()[1]/10);
+        .attr("y2", yScale.range()[1] + yScale.range()[1] / 10);
 
 }
 
 function centerLatLongWithMax() {
-    if (! autofocus) {
+    if (!autofocus) {
         return
     }
     // {"locations": [{
@@ -163,8 +175,8 @@ function centerLatLongWithMax() {
     //     "lon": 4.9,
     //     "location": "China - Hubei",
     //     "values": [
-    //         { "scaled": 0.0, "absolute": 0},
-    //         { "scaled": 5.5, "absolute": 25},
+    //         { "scl": 0.0, "abs": 0},
+    //         { "scl": 5.5, "abs": 25},
     //     ]
     //     }]
     // },
@@ -181,7 +193,7 @@ function centerLatLongWithMax() {
     lat = window.data["locations"][location_idx]["lat"]
     lon = window.data["locations"][location_idx]["lon"]
     location_name = window.data["locations"][location_idx]["location"]
-    document.getElementById("focus-region").innerHTML = location_name + ' - ' + window.data["locations"][location_idx]["values"][current_index]["absolute"] + ' cases'
+    document.getElementById("focus-region").innerHTML = location_name + ' - ' + window.data["locations"][location_idx]["values"][current_index]["abs"] + ' cases'
     globe_center_x_y = translateLatLngToGlobeTarget(lat, lon);
     globe.target.x = globe_center_x_y.x;
     globe.target.y = globe_center_x_y.y;
@@ -202,11 +214,44 @@ function datasetColor(datasetType) {
 function loadDataForDay() {
     console.log("loadDataForDay" + current_index);
     var subgeo = new THREE.Geometry();
+    // By default, let's show the color based on the dataset type
     color = datasetColor(datasetType)
     for (i = 0; i < window.data["locations"].length; i++) {
+        if ("hide" in window.data["locations"][i]["values"][current_index]){
+            continue;
+        }
         lat = window.data["locations"][i]["lat"];
         lon = window.data["locations"][i]["lon"];
-        magnitude = window.data["locations"][i]["values"][current_index]["scaled"];
+        magnitude = 0
+        dayStats = window.data["series_stats"][current_index]
+        focus_stat_max_value = dayStats[current_stat_type]["value"]
+        if (current_stat_type == "top_cummulative"){
+            magnitude = window.data["locations"][i]["values"][current_index]["abs"] / focus_stat_max_value;
+        } else {
+            delta = window.data["locations"][i]["values"][current_index]["dlt"];
+            magnitude = delta / focus_stat_max_value;
+            if (delta > 0) {
+                if (datasetType == "recovered"){
+                    // More recovered = green
+                    color = 0xc6ff00;
+                } else {
+                    // More confirmed/deaths = red
+                    color = 0xb71c1c;
+                }
+            } else {
+                if (datasetType == "recovered"){
+                    // Less recovered = red
+                    color = 0xb71c1c;
+                } else {
+                    // Less confirmed/deaths = green
+                    color = 0xc6ff00;
+                }
+            }
+            color = new THREE.Color(color)
+        }
+        if (magnitude > 1){
+            console.log(focus_stat_max_value, dayStats, focus_stat_max_value, magnitude);
+        }
         if (magnitude > 0) {
             magnitude = magnitude * 200;
             globe.addPoint(lat, lon, magnitude, color, subgeo);
@@ -222,7 +267,12 @@ function change(i) {
         }
         dayInfo = window.data["series_stats"][current_index]
         document.getElementById("current-day").innerHTML = dayInfo["name"]
-        document.getElementById("current-stats").innerHTML = dayInfo["global_total"] + " Global"
+        if (stat_type == "top_cummulative"){
+            stat_display = dayInfo["cummulative_global"] + "Global Total";
+        } else {
+            stat_display = dayInfo["delta_global"] + "Delta Total";
+        }
+        document.getElementById("current-stats").innerHTML = stat_display
         globe.resetData();
         loadDataForDay()
         globe.createPoints();

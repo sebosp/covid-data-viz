@@ -24,10 +24,10 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(gps_key, "0,80,Country - Province,False,False")
         first_day_record = parsed_daily_data.get("20-01-22")
         self.assertIsNotNone(first_day_record)
-        self.assertEqual(first_day_record, {"absolute": 1})
+        self.assertEqual(first_day_record, {"abs": 1})
         second_day_record = parsed_daily_data.get("20-01-01")
         self.assertIsNotNone(second_day_record)
-        self.assertEqual(second_day_record, {"absolute": 5})
+        self.assertEqual(second_day_record, {"abs": 5})
         # Return a dict for future re-use
         test_data = dict()
         test_data[gps_key] = parsed_daily_data
@@ -39,21 +39,21 @@ class TestParsing(unittest.TestCase):
 
     def test_scale_daily_values(self):
         test_data = self.test_parse_data()
-        scaled_data = transform.scale_daily_values(test_data)
-        gps_record = scaled_data.get("0,80,Country - Province,False,False")
+        scl_data = transform.scale_daily_values(test_data)
+        gps_record = scl_data.get("0,80,Country - Province,False,False")
         self.assertIsNotNone(gps_record)
         first_day_data = gps_record.get("20-01-22")
-        self.assertEqual(first_day_data, {"scaled": 0.2, "absolute": 1})
+        self.assertEqual(first_day_data, {"scl": 0.2, "abs": 1})
         second_day_data = gps_record.get("20-01-01")
-        self.assertEqual(second_day_data, {"scaled": 1, "absolute": 5})
+        self.assertEqual(second_day_data, {"scl": 1, "abs": 5})
 
     def test_generate_globe_json(self):
         header_dates = self.test_parse_header()
         test_data = self.test_parse_data()
-        scaled_data = transform.scale_daily_values(test_data)
+        scl_data = transform.scale_daily_values(test_data)
         globe_json = transform.generate_globe_json_string(
-            scaled_data, header_dates, pretty_print=False)
-        self.assertEqual(globe_json, '{"locations": [{"lat": 0.0, "lon": 80.0, "location": "Country - Province", "values": [{"scaled": 1.0, "absolute": 5}, {"scaled": 0.2, "absolute": 1}]}], "series_stats": [{"name": "20-01-01", "top_cummulative": {"value": 5, "location_idx": 0}}, {"name": "20-01-22", "top_cummulative": {"value": 1, "location_idx": 0}}]}')
+            scl_data, header_dates, pretty_print=False)
+        self.assertEqual(globe_json, '{"locations": [{"lat": 0.0, "lon": 80.0, "location": "Country - Province", "values": [{"scl": 1.0, "abs": 5}, {"scl": 0.2, "abs": 1}]}], "series_stats": [{"name": "20-01-01", "top_cummulative": {"value": 5, "location_idx": 0}}, {"name": "20-01-22", "top_cummulative": {"value": 1, "location_idx": 0}}]}')
 
     def test_merge_gps_records(self):
         lhs_data = self.test_parse_data()
