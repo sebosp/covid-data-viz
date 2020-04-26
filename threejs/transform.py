@@ -132,17 +132,17 @@ def get_stats_for_day(gps_records, series_key):
     Returns a dict with collected stats for a given day.
     :param gps_records dict: The per-day gps records with their abs/delta values
     :param series_key: The 0 indexed day from the start of our dataset
-    :returns: dict with {"top_cummulative": {"value": X, "location_idx": Y}, "total": Z}
+    :returns: dict with {"top_cumulative": {"value": X, "location_idx": Y}, "total": Z}
     """
     res = dict()
     res["name"] = series_key
-    res["top_cummulative"] = dict()
-    res["top_cummulative"]["value"] = 0
-    res["top_cummulative"]["location_idx"] = 0
+    res["top_cumulative"] = dict()
+    res["top_cumulative"]["value"] = 0
+    res["top_cumulative"]["location_idx"] = 0
     res["top_delta"] = dict()
     res["top_delta"]["value"] = 0
     res["top_delta"]["location_idx"] = 0
-    cummulative_global = 0
+    cumulative_global = 0
     delta_global = 0
     location_number = 0
     for lat_lon_key, lat_lon_data in gps_records.items():
@@ -154,16 +154,16 @@ def get_stats_for_day(gps_records, series_key):
                     logging.debug("Ignoring stat for day: %s location: %s, USFileType: %s, forceProcessUS: %s",
                                   day_key, location, USFileType, forceProcessUS)
                 else:
-                    cummulative_global += day_data["absolute"]
+                    cumulative_global += day_data["absolute"]
                     delta_global += day_data["delta"]
-                if day_data["absolute"] > res["top_cummulative"]["value"]:
-                    res["top_cummulative"]["value"] = day_data["absolute"]
-                    res["top_cummulative"]["location_idx"] = location_number
+                if day_data["absolute"] > res["top_cumulative"]["value"]:
+                    res["top_cumulative"]["value"] = day_data["absolute"]
+                    res["top_cumulative"]["location_idx"] = location_number
                 if day_data["delta"] > res["top_delta"]["value"]:
                     res["top_delta"]["value"] = day_data["delta"]
                     res["top_delta"]["location_idx"] = location_number
         location_number += 1
-    res["cummulative_global"] = cummulative_global
+    res["cumulative_global"] = cumulative_global
     res["delta_global"] = delta_global
     return res
 

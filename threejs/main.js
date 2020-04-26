@@ -3,7 +3,7 @@ if (!Detector.webgl) {
 } else {
     var current_index = 84;
     // By default focus the region with the max totals
-    var current_stat_type = "top_cummulative"
+    var current_stat_type = "top_cumulative"
     var autofocus = true;
     var colors = [0xc62828];
     var container = document.getElementById("globe-container");
@@ -37,13 +37,14 @@ function toggleAutoFocus() {
 }
 
 function toggleStatType() {
-    if (current_stat_type == "top_cummulative"){
+    if (current_stat_type == "top_cumulative"){
         current_stat_type = "top_delta"
         document.getElementById("stat_type").innerHTML = "change_history"
     } else {
-        current_stat_type = "top_cummulative"
+        current_stat_type = "top_cumulative"
         document.getElementById("stat_type").innerHTML = "present_to_all"
     }
+    updateDisplays()
 }
 
 function changeDataFromDatePicker(newDate) {
@@ -61,7 +62,7 @@ function clearData() {
 
 function incrementDayBy(offset) {
     current_index = (current_index + offset + window.data["series_stats"].length) % window.data["series_stats"].length;
-    change(current_index);
+    updateDisplays();
 }
 
 function translateGlobeTargetToLatLng() {
@@ -182,7 +183,7 @@ function centerLatLongWithMax() {
     // },
     // "series_stats": [{
     //     "name": "20-01-22",
-    //     "top_cummulative": {
+    //     "top_cumulative": {
     //         "location_idx": 0,
     //         "value": 444
     //     },
@@ -211,8 +212,8 @@ function datasetColor(datasetType) {
     }
     return new THREE.Color(barColor);
 }
-function loadDataForDay() {
-    console.log("loadDataForDay" + current_index);
+function loadGlobeDataForDay() {
+    console.log("loadGlobeDataForDay" + current_index);
     var subgeo = new THREE.Geometry();
     // By default, let's show the color based on the dataset type
     color = datasetColor(datasetType)
@@ -225,7 +226,7 @@ function loadDataForDay() {
         magnitude = 0
         dayStats = window.data["series_stats"][current_index]
         focus_stat_max_value = dayStats[current_stat_type]["value"]
-        if (current_stat_type == "top_cummulative"){
+        if (current_stat_type == "top_cumulative"){
             magnitude = window.data["locations"][i]["values"][current_index]["abs"] / focus_stat_max_value;
         } else {
             delta = window.data["locations"][i]["values"][current_index]["dlt"];
@@ -259,22 +260,24 @@ function loadDataForDay() {
     }
     globe.setBaseGeometry(subgeo)
 }
-function change(i) {
-    console.log("Changing data for index:" + current_index);
+function updateDisplays(i) {
+    console.log("updateDisplays for index:" + current_index);
     if (window.data) {
         if (i) {
             current_index = i % window.data["series_stats"].length;
         }
         dayInfo = window.data["series_stats"][current_index]
         document.getElementById("current-day").innerHTML = dayInfo["name"]
-        if (stat_type == "top_cummulative"){
-            stat_display = dayInfo["cummulative_global"] + "Global Total";
+        if (current_stat_type == "top_cumulative"){
+            console.log("this is top cummulative");
+            stat_display = dayInfo["cumulative_global"] + " Global cumulative";
         } else {
-            stat_display = dayInfo["delta_global"] + "Delta Total";
+            console.log("this is NOT top cummulative");
+            stat_display = dayInfo["delta_global"] + " Delta Total";
         }
         document.getElementById("current-stats").innerHTML = stat_display
         globe.resetData();
-        loadDataForDay()
+        loadGlobeDataForDay()
         globe.createPoints();
         centerLatLongWithMax();
     }
@@ -298,7 +301,7 @@ function loadData(url) {
             if (xhr.status === 200) {
                 window.data = JSON.parse(xhr.responseText);
                 document.body.style.backgroundImage = "none"; // remove loading
-                change();
+                updateDisplays();
             }
         }
     };
