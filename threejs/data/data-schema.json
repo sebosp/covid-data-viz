@@ -1,0 +1,18 @@
+{"locations": [{
+    "lat": 10,
+    "lon": 4.9,
+    "location": "China - Hubei",
+    "values": [
+        0.0,
+        5.5
+    ]
+    }]
+},
+"series_stats": [{
+    "name": "20-01-22",
+    "max_cumulative": {
+        "location_idx": 0,
+        "value": 444
+    },
+    "total": 555
+}]}
