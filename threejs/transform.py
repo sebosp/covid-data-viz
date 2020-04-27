@@ -53,7 +53,7 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
     :param USFileType bool: Mark the records as being from either US filetype or not
     :param offset_dates int: override the default calculation of offset_dates
     :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
-    :returns tuple: ("Lat,Long,Country - Region,True,True", [{"Year-Mothh-Day":{"absolute": DayValue, "delta"= 5}},{}])
+    :returns tuple: ("Lat,Long,Country - Region,True,True", [{"Year-Mothh-Day":{"cumulative": CumulativeValue, "day": DayTotal, "delta": Delta}},{}])
     """
     res = dict()
     logger = logging.getLogger("parse_data_line")
@@ -77,22 +77,29 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
             offset_dates = 4
     gps_key = "{},{},{},{},{}".format(
         lat, lon, country_region, USFileType, forceProcessUS)
-    prev_date_value = None
+    prev_cumulative = None
+    prev_day_value = None
     for date_idx, date_item in enumerate(data_array[offset_dates:]):
         current_column_date = date_keys[date_idx]
         logger.debug("Found data %s for day: %s",
                      date_item, current_column_date)
         # The data may be a 0.0 in some columns, but ases shouldn't be floating points?
         curr_date_value = int(float(date_item))
-        if prev_date_value is None:
-            delta = 0
+        if prev_cumulative is None:
+            # This is the first date recorded, the daily value will be set to cumulative.
+            # There is no delta yet.
+            day_value = curr_date_value
+            day_delta = 0
         else:
-            delta = curr_date_value - prev_date_value
+            day_value = curr_date_value - prev_cumulative
+            day_delta = day_value - prev_day_value
         res[current_column_date] = {
-            "absolute": curr_date_value,
-            "delta": delta
+            "cumulative": curr_date_value,
+            "day": day_value,
+            "delta": day_delta
         }
-        prev_date_value = curr_date_value
+        prev_day_value = day_value
+        prev_cumulative = curr_date_value
     return (gps_key, res)
 
 
@@ -102,7 +109,7 @@ def parse_csv_file(fname, USFileType=False, offset_dates=None, forceProcessUS=Fa
     :param USFileType bool: Mark the records as being from either US filetype or not
     :param offset_dates int: override the default calculation of offset_dates
     :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
-    :returns tuple like (["date1","date2"]{"lat,long,Country - Province,False,False":[{"2020-02-01":{"absolute": 100, "delta": 5}}])
+    :returns tuple like (["date1","date2"]{"lat,long,Country - Province,False,False":[{"2020-02-01":{"cumulative": 100, "day": 2, "delta": -5}}])
     """
     logger = logging.getLogger("parse_csv_file")
     logger.info("Starting to parse file %s", fname)
@@ -130,7 +137,7 @@ def parse_csv_file(fname, USFileType=False, offset_dates=None, forceProcessUS=Fa
 def get_stats_for_day(gps_records, series_key):
     """
     Returns a dict with collected stats for a given day.
-    :param gps_records dict: The per-day gps records with their abs/delta values
+    :param gps_records dict: The per-day gps records with their cumulative/day/delta values
     :param series_key: The 0 indexed day from the start of our dataset
     :returns: dict with {"top_cumulative": {"value": X, "location_idx": Y}, "total": Z}
     """
@@ -139,10 +146,18 @@ def get_stats_for_day(gps_records, series_key):
     res["top_cumulative"] = dict()
     res["top_cumulative"]["value"] = 0
     res["top_cumulative"]["location_idx"] = 0
+    res["top_day"] = dict()
+    res["top_day"]["value"] = 0
+    res["top_day"]["location_idx"] = 0
+    res["delta"] = dict()
     res["top_delta"] = dict()
     res["top_delta"]["value"] = 0
     res["top_delta"]["location_idx"] = 0
+    # For the most part, the stats have minimum value of 0, except for delta, which can be negative
+    # So let's find the minimum value
+    min_delta = 999999999 # Stupid way to use something like u64::MAX :(
     cumulative_global = 0
+    day_global = 0
     delta_global = 0
     location_number = 0
     for lat_lon_key, lat_lon_data in gps_records.items():
@@ -154,27 +169,35 @@ def get_stats_for_day(gps_records, series_key):
                     logging.debug("Ignoring stat for day: %s location: %s, USFileType: %s, forceProcessUS: %s",
                                   day_key, location, USFileType, forceProcessUS)
                 else:
-                    cumulative_global += day_data["absolute"]
+                    cumulative_global += day_data["cumulative"]
+                    day_global += day_data["day"]
                     delta_global += day_data["delta"]
-                if day_data["absolute"] > res["top_cumulative"]["value"]:
-                    res["top_cumulative"]["value"] = day_data["absolute"]
+                if day_data["cumulative"] > res["top_cumulative"]["value"]:
+                    res["top_cumulative"]["value"] = day_data["cumulative"]
                     res["top_cumulative"]["location_idx"] = location_number
+                if day_data["day"] > res["top_day"]["value"]:
+                    res["top_day"]["value"] = day_data["day"]
+                    res["top_day"]["location_idx"] = location_number
                 if day_data["delta"] > res["top_delta"]["value"]:
                     res["top_delta"]["value"] = day_data["delta"]
                     res["top_delta"]["location_idx"] = location_number
+                if day_data["delta"] < min_delta:
+                    min_delta = day_data["delta"]
         location_number += 1
     res["cumulative_global"] = cumulative_global
+    res["day_global"] = day_global
     res["delta_global"] = delta_global
+    res["min_delta"] = min_delta
     return res
 
 
 def generate_globe_json_string(gps_records, daily_series, pretty_print=False):
     """
     Returns a JSON object that can be loaded into the our globe drawing functions
-    :param gps_records dict: The per-day gps records with their abs/delta values
+    :param gps_records dict: The per-day gps records with their cumulative/day/delta values
     :param daily_series list: The list of days that we are filling
     :param pretty_print bool: human readable json structures
-    Data format: https://github.com/dataarts/webgl-globe#data-format
+    Data format: see data/-data-schema.json
     """
     logger = logging.getLogger("generate_globe_json_string")
     logger.info("Starting creating array structs for the JSON")
@@ -196,17 +219,19 @@ def generate_globe_json_string(gps_records, daily_series, pretty_print=False):
             if USFileType == "False" and location == "US" and forceProcessUS == "False":
                 # The data for US in this filetype is aggregated, let's not draw it twice
                 # we will send a "hide" flag
-                day_array.append({
-                    "hide": 1,
-                    "dlt": day_data["delta"],
-                    "abs": day_data["absolute"],
-                })
+                day_array.append([
+                    day_data["cumulative"],
+                    day_data["day"],
+                    day_data["delta"],
+                    1,
+                ])
             else:
                 # Let's rounde the day value by 3 floats to reduce json file size
-                day_array.append({
-                    "dlt": day_data["delta"],
-                    "abs": day_data["absolute"]
-                })
+                day_array.append([
+                    day_data["cumulative"],
+                    day_data["day"],
+                    day_data["delta"],
+                ])
         location_struct = dict()
         location_struct["lat"] = lat
         location_struct["lon"] = lon

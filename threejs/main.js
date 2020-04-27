@@ -1,9 +1,39 @@
 if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
-    var current_index = 84;
-    // By default focus the region with the max totals
-    var current_stat_type = "top_cumulative"
+    var current_day_index = 84;
+    // By default focus the region with the top cummulative value
+    var current_stat_index = 0;
+    var available_stats = [
+        {
+            "type": "top_cumulative",
+            "legend": "Cumulative Cases",
+            "icon": "present_to_all",
+            "min_value_fn": function () {return 0},
+            "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_cumulative"]["value"]},
+            "data_fn": function (d) {return d[0]},
+            "color_fn": function (d) {return datasetColor(d)}
+        },
+        {
+            "type": "top_day",
+            "legend": "Daily Cases",
+            "icon": "today",
+            "min_value_fn": function () {return 0},
+            "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_day"]["value"]},
+            "data_fn": function (d) {return d[1]},
+            "color_fn": function (d) {return datasetColor(d)}
+        },
+        {
+            "type": "top_delta",
+            "legend": "Trend In Cases",
+            "icon": "change_history",
+            // The trend can be negative, so we need to find the minimum value
+            "min_value_fn": function () {return window.data["series_stats"][current_day_index]["min_delta"]},
+            "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_delta"]["value"]},
+            "data_fn": function (d) {return d[2]},
+            "color_fn": function (d) {return datasetColor(d)}
+        }
+    ]
     var autofocus = true;
     var colors = [0xc62828];
     var container = document.getElementById("globe-container");
@@ -34,16 +64,14 @@ if (!Detector.webgl) {
 function toggleAutoFocus() {
     autofocus = !autofocus;
     document.getElementById("autofocus").innerHTML = autofocus ? "center_focus_strong" : "center_focus_weak";
+    if (autofocus) {
+        updateDisplays()
+    }
 }
 
 function toggleStatType() {
-    if (current_stat_type == "top_cumulative"){
-        current_stat_type = "top_delta"
-        document.getElementById("stat_type").innerHTML = "change_history"
-    } else {
-        current_stat_type = "top_cumulative"
-        document.getElementById("stat_type").innerHTML = "present_to_all"
-    }
+    current_stat_index = (current_stat_index + 1) % available_stats.length;
+    document.getElementById("stat_type").innerHTML = available_stats[current_stat_index]["icon"];
     updateDisplays()
 }
 
@@ -61,7 +89,7 @@ function clearData() {
 }
 
 function incrementDayBy(offset) {
-    current_index = (current_index + offset + window.data["series_stats"].length) % window.data["series_stats"].length;
+    current_day_index = (current_day_index + offset + window.data["series_stats"].length) % window.data["series_stats"].length;
     updateDisplays();
 }
 
@@ -81,7 +109,6 @@ function translateLatLngToGlobeTarget(lat, lng) {
 }
 
 function updateCountryD3Graph(location_idx) {
-    // TODO: Use delta here
     console.log("Updating Coutry D3 Graph: ", location_idx);
     var myNode = document.getElementById("region-graph");
     while (myNode.firstChild) {
@@ -89,12 +116,15 @@ function updateCountryD3Graph(location_idx) {
     }
     d3_data = Array()
     columns = window.data["series_stats"].map(d => d.name);
+    chartTitle = available_stats[current_stat_index]["legend"]
     d3_data = {
-        y: "Number of Cases",
+        y: chartTitle,
         series: [
             {
                 name: window.data["locations"][location_idx]["location"],
-                values: window.data["locations"][location_idx]["values"].map(d => d["abs"]),
+                values: window.data["locations"][location_idx]["values"].map(
+                    available_stats[current_stat_index]["data_fn"]
+                ),
             }
         ],
         dates: columns.map(d3.utcParse("%y-%m-%d"))
@@ -103,7 +133,10 @@ function updateCountryD3Graph(location_idx) {
         .domain(d3.extent(d3_data.dates))
         .range([chartMargin.left, chartWidth - chartMargin.right])
     yScale = d3.scaleLinear()
-        .domain([0, d3.max(d3_data.series, d => d3.max(d.values))]).nice()
+        .domain([
+            available_stats[current_stat_index]["min_value_fn"](),
+            d3.max(d3_data.series, d => d3.max(d.values)) // Maybe use max_value_fn
+        ]).nice()
         .range([chartHeight - chartMargin.bottom, chartMargin.top])
     xAxis = g => g
         .attr("transform", `translate(0,${chartHeight - chartMargin.bottom})`)
@@ -144,7 +177,7 @@ function updateCountryD3Graph(location_idx) {
 
     svg.append("g")
         .attr("fill", "none")
-        .attr("stroke", "#" + datasetColor(datasetType).getHexString())
+        .attr("stroke", "#" + datasetColor().getHexString())
         .attr("stroke-chartWidth", 1.5)
         .attr("stroke-linejoin", "round")
         .attr("stroke-linecap", "round")
@@ -154,7 +187,7 @@ function updateCountryD3Graph(location_idx) {
         .style("mix-blend-mode", "multiply")
         .attr("d", d => line(d.values));
 
-    dayInfo = window.data["series_stats"][current_index]
+    dayInfo = window.data["series_stats"][current_day_index]
     cutoffDate = d3.utcParse("%y-%m-%d")(dayInfo["name"])
     svg.append("line")
         .style("stroke", "white")
@@ -176,8 +209,9 @@ function centerLatLongWithMax() {
     //     "lon": 4.9,
     //     "location": "China - Hubei",
     //     "values": [
-    //         { "scl": 0.0, "abs": 0},
-    //         { "scl": 5.5, "abs": 25},
+    //         [ 0,  0,  0], <cumulative>, <day_increment>, <day_increment_delta>
+    //         [ 25, 25, 25],
+    //         [ 30, 5,  -20],
     //     ]
     //     }]
     // },
@@ -187,70 +221,74 @@ function centerLatLongWithMax() {
     //         "location_idx": 0,
     //         "value": 444
     //     },
+    //     "top_day": {
+    //         "location_idx": 0,
+    //         "value": 444
+    //     },
+    //     "delta": {
+    //         "top": {
+    //             "location_idx": 0,
+    //             "value": 444
+    //         },
+    //         "min": {
+    //             "location_idx": 0,
+    //             "value": 444
+    //         },
+    //     },
     //     "total": 555
     // }]}
-    dayStats = window.data["series_stats"][current_index]
-    location_idx = dayStats[current_stat_type]["location_idx"]
+    dayStats = window.data["series_stats"][current_day_index]
+    location_idx = dayStats[available_stats[current_stat_index]["type"]]["location_idx"]
     lat = window.data["locations"][location_idx]["lat"]
     lon = window.data["locations"][location_idx]["lon"]
     location_name = window.data["locations"][location_idx]["location"]
-    document.getElementById("focus-region").innerHTML = location_name + ' - ' + window.data["locations"][location_idx]["values"][current_index]["abs"] + ' cases'
+    stat_value = available_stats[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
+    stat_legend = available_stats[current_stat_index]["legend"]
+    document.getElementById("focus-region").innerHTML = location_name + ' - ' + stat_value + ' ' + stat_legend
     globe_center_x_y = translateLatLngToGlobeTarget(lat, lon);
     globe.target.x = globe_center_x_y.x;
     globe.target.y = globe_center_x_y.y;
     updateCountryD3Graph(location_idx);
 
 }
-function datasetColor(datasetType) {
-    barColor = 0x00ff00;
-    if (datasetType == "deaths") {
-        barColor = 0xb71c1c;
-    } else if (datasetType == "confirmed") {
-        barColor = 0xe65100;
-    } else {
-        barColor = 0xc6ff00;
+
+function datasetColor(value) {
+    stat_type = available_stats[current_stat_index]["type"]
+    switch (datasetType) {
+        case "deaths": if (stat_type == "top_delta" && value < 1) {
+            // Less daily deaths = green
+            return new THREE.Color(0xc6ff00);
+        } else {
+            return new THREE.Color(0xb71c1c);
+        }
+        case "confirmed": if (stat_type == "top_delta" && value < 1) {
+            // Less daily confirmed = green
+            return new THREE.Color(0xc6ff00);
+        } else {
+            return new THREE.Color(0xe65100);
+        }
+        // Default would hit recovered, if we have no daily increase of recovered I'm not sure we should paint the line red...
+        default: return new THREE.Color(0xc6ff00);
     }
-    return new THREE.Color(barColor);
 }
+
 function loadGlobeDataForDay() {
-    console.log("loadGlobeDataForDay" + current_index);
+    console.log("loadGlobeDataForDay" + current_day_index);
     var subgeo = new THREE.Geometry();
     // By default, let's show the color based on the dataset type
-    color = datasetColor(datasetType)
-    for (i = 0; i < window.data["locations"].length; i++) {
-        if ("hide" in window.data["locations"][i]["values"][current_index]){
+    focus_stat_max_value = available_stats[current_stat_index]["max_value_fn"]();
+    for (location_idx = 0; location_idx < window.data["locations"].length; location_idx++) {
+        // A 4th item in the values array could be for hiding a value (not drawing), to avoid counting several times
+        if (window.data["locations"][location_idx]["values"][current_day_index].length > 3) {
             continue;
         }
-        lat = window.data["locations"][i]["lat"];
-        lon = window.data["locations"][i]["lon"];
-        magnitude = 0
-        dayStats = window.data["series_stats"][current_index]
-        focus_stat_max_value = dayStats[current_stat_type]["value"]
-        if (current_stat_type == "top_cumulative"){
-            magnitude = window.data["locations"][i]["values"][current_index]["abs"] / focus_stat_max_value;
-        } else {
-            delta = window.data["locations"][i]["values"][current_index]["dlt"];
-            magnitude = delta / focus_stat_max_value;
-            if (delta > 0) {
-                if (datasetType == "recovered"){
-                    // More recovered = green
-                    color = 0xc6ff00;
-                } else {
-                    // More confirmed/deaths = red
-                    color = 0xb71c1c;
-                }
-            } else {
-                if (datasetType == "recovered"){
-                    // Less recovered = red
-                    color = 0xb71c1c;
-                } else {
-                    // Less confirmed/deaths = green
-                    color = 0xc6ff00;
-                }
-            }
-            color = new THREE.Color(color)
-        }
-        if (magnitude > 1){
+        lat = window.data["locations"][location_idx]["lat"];
+        lon = window.data["locations"][location_idx]["lon"];
+        dayStats = window.data["series_stats"][current_day_index];
+        day_value = available_stats[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
+        color = available_stats[current_stat_index]["color_fn"](day_value)
+        magnitude = day_value / focus_stat_max_value;
+        if (magnitude > 1) {
             console.log(focus_stat_max_value, dayStats, focus_stat_max_value, magnitude);
         }
         if (magnitude > 0) {
@@ -260,22 +298,42 @@ function loadGlobeDataForDay() {
     }
     globe.setBaseGeometry(subgeo)
 }
-function updateDisplays(i) {
-    console.log("updateDisplays for index:" + current_index);
+
+function updateDisplays(day_index) {
+    console.log("updateDisplays for index:" + current_day_index);
     if (window.data) {
-        if (i) {
-            current_index = i % window.data["series_stats"].length;
+        if (day_index) {
+            current_day_index = day_index % window.data["series_stats"].length;
         }
-        dayInfo = window.data["series_stats"][current_index]
-        document.getElementById("current-day").innerHTML = dayInfo["name"]
-        if (current_stat_type == "top_cumulative"){
-            console.log("this is top cummulative");
-            stat_display = dayInfo["cumulative_global"] + " Global cumulative";
-        } else {
-            console.log("this is NOT top cummulative");
-            stat_display = dayInfo["delta_global"] + " Delta Total";
+        dayStats = window.data["series_stats"][current_day_index];
+        document.getElementById("current-day").innerHTML = dayStats["name"]
+        location_idx = dayStats[available_stats[current_stat_index]["type"]]["location_idx"]
+        stat_type = available_stats[current_stat_index]["type"]
+        stat_legend = available_stats[current_stat_index]["legend"]
+        stat_value = available_stats[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
+        if (stat_type == "top_delta"){
+            if (stat_value > 0){
+                icon = 'trending_up'
+                if (datasetType == "recovered") {
+                    // More recovered = green
+                    stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + stat_value;
+                } else {
+                    stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + stat_value;
+                }
+            } else if (stat_value == 0) {
+                icon = 'trending_flat'
+                stat_value = '<i class="material-icons grey">' + icon + '</i> ' + stat_value;
+            } else {
+                icon = 'trending_down'
+                if (datasetType == "recovered") {
+                    // Less recovered = red
+                    stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + stat_value;
+                } else {
+                    stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + stat_value;
+                }
+            }
         }
-        document.getElementById("current-stats").innerHTML = stat_display
+        document.getElementById("current-stats").innerHTML = stat_value + ' ' + stat_legend
         globe.resetData();
         loadGlobeDataForDay()
         globe.createPoints();

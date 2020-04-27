@@ -3,16 +3,28 @@
     "lon": 4.9,
     "location": "China - Hubei",
     "values": [
-        0.0,
-        5.5
+        [5,  5, 0], /*"<cumulative>", "<day_increment>", "<day_delta>",*/
+        [15, 10, 5]
+        [18, 3, -7]
     ]
     }]
 },
 "series_stats": [{
     "name": "20-01-22",
-    "max_cumulative": {
+    "top_cumulative": {
         "location_idx": 0,
-        "value": 444
+        "value": 5
     },
-    "total": 555
+    "top_day": {
+        "location_idx": 0,
+        "value": 5
+    },
+    "top_delta": {
+        "location_idx": 0,
+        "value": 0
+    },
+    "cumulative_global": 5,
+    "day_global": 5,
+    "delta_global": 0,
+    "min_delta": 0
 }]}
