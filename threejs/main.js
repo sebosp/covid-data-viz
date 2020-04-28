@@ -2,9 +2,10 @@ if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
     var current_day_index = 84;
+    var current_focused_location = 0;
     // By default focus the region with the top cummulative value
     var current_stat_index = 0;
-    var available_stats = [
+    var stats_config = [
         {
             "type": "top_cumulative",
             "legend": "Cumulative Cases",
@@ -28,7 +29,9 @@ if (!Detector.webgl) {
             "legend": "Trend In Cases",
             "icon": "change_history",
             // The trend can be negative, so we need to find the minimum value
-            "min_value_fn": function () {return window.data["series_stats"][current_day_index]["min_delta"]},
+            "min_value_fn": function () {
+                return Math.min(...window.data["locations"][current_focused_location]["values"].map(d => d[2]))
+            },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_delta"]["value"]},
             "data_fn": function (d) {return d[2]},
             "color_fn": function (d) {return datasetColor(d)}
@@ -70,8 +73,8 @@ function toggleAutoFocus() {
 }
 
 function toggleStatType() {
-    current_stat_index = (current_stat_index + 1) % available_stats.length;
-    document.getElementById("stat_type").innerHTML = available_stats[current_stat_index]["icon"];
+    current_stat_index = (current_stat_index + 1) % stats_config.length;
+    document.getElementById("stat_type").innerHTML = stats_config[current_stat_index]["icon"];
     updateDisplays()
 }
 
@@ -108,22 +111,22 @@ function translateLatLngToGlobeTarget(lat, lng) {
     }
 }
 
-function updateCountryD3Graph(location_idx) {
-    console.log("Updating Coutry D3 Graph: ", location_idx);
+function updateCountryD3Graph() {
+    console.log("Updating Coutry D3 Graph: ", current_focused_location);
     var myNode = document.getElementById("region-graph");
     while (myNode.firstChild) {
         myNode.removeChild(myNode.firstChild);
     }
     d3_data = Array()
     columns = window.data["series_stats"].map(d => d.name);
-    chartTitle = available_stats[current_stat_index]["legend"]
+    chartTitle = stats_config[current_stat_index]["legend"]
     d3_data = {
         y: chartTitle,
         series: [
             {
-                name: window.data["locations"][location_idx]["location"],
-                values: window.data["locations"][location_idx]["values"].map(
-                    available_stats[current_stat_index]["data_fn"]
+                name: window.data["locations"][current_focused_location]["location"],
+                values: window.data["locations"][current_focused_location]["values"].map(
+                    stats_config[current_stat_index]["data_fn"]
                 ),
             }
         ],
@@ -134,7 +137,7 @@ function updateCountryD3Graph(location_idx) {
         .range([chartMargin.left, chartWidth - chartMargin.right])
     yScale = d3.scaleLinear()
         .domain([
-            available_stats[current_stat_index]["min_value_fn"](),
+            stats_config[current_stat_index]["min_value_fn"](),
             d3.max(d3_data.series, d => d3.max(d.values)) // Maybe use max_value_fn
         ]).nice()
         .range([chartHeight - chartMargin.bottom, chartMargin.top])
@@ -197,13 +200,21 @@ function updateCountryD3Graph(location_idx) {
         .attr("x2", xScale(cutoffDate))
         .attr("y1", yScale.range()[0])
         .attr("y2", yScale.range()[1] + yScale.range()[1] / 10);
+    stat_type = stats_config[current_stat_index]["type"]
+    if (stat_type == "top_delta") {
+    svg.append("line")
+        .style("stroke", "white")
+        .style("stroke-dasharray", "2px")
+        .style("stroke-opacity", "0.5")
+        .attr("x1", xScale.range()[0])
+        .attr("x2", xScale.range()[1])
+        .attr("y1", yScale(0))
+        .attr("y2", yScale(0))
+    }
 
 }
 
 function centerLatLongWithMax() {
-    if (!autofocus) {
-        return
-    }
     // {"locations": [{
     //     "lat": 10,
     //     "lon": 4.9,
@@ -238,22 +249,47 @@ function centerLatLongWithMax() {
     //     "total": 555
     // }]}
     dayStats = window.data["series_stats"][current_day_index]
-    location_idx = dayStats[available_stats[current_stat_index]["type"]]["location_idx"]
-    lat = window.data["locations"][location_idx]["lat"]
-    lon = window.data["locations"][location_idx]["lon"]
-    location_name = window.data["locations"][location_idx]["location"]
-    stat_value = available_stats[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
-    stat_legend = available_stats[current_stat_index]["legend"]
-    document.getElementById("focus-region").innerHTML = location_name + ' - ' + stat_value + ' ' + stat_legend
+    if (autofocus) {
+        current_focused_location = dayStats[stats_config[current_stat_index]["type"]]["location_idx"]
+    }
+    lat = window.data["locations"][current_focused_location]["lat"]
+    lon = window.data["locations"][current_focused_location]["lon"]
+    location_name = window.data["locations"][current_focused_location]["location"]
+    stat_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][current_focused_location]["values"][current_day_index])
+    stat_legend = stats_config[current_stat_index]["legend"]
+    stat_type = stats_config[current_stat_index]["type"]
+    if (stat_type == "top_delta") {
+        if (stat_value > 0) {
+            icon = 'trending_up'
+            if (datasetType == "recovered") {
+                // More recovered = green
+                stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + stat_value;
+            } else {
+                stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + stat_value;
+            }
+        } else if (stat_value == 0) {
+            icon = 'trending_flat'
+            stat_value = '<i class="material-icons grey">' + icon + '</i> ' + stat_value;
+        } else {
+            icon = 'trending_down'
+            if (datasetType == "recovered") {
+                // Less recovered = red
+                stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + stat_value;
+            } else {
+                stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + stat_value;
+            }
+        }
+    }
+    document.getElementById("focus-region").innerHTML = location_name + ' [' + stat_value + '] ' + stat_legend
+    updateCountryD3Graph();
     globe_center_x_y = translateLatLngToGlobeTarget(lat, lon);
     globe.target.x = globe_center_x_y.x;
     globe.target.y = globe_center_x_y.y;
-    updateCountryD3Graph(location_idx);
 
 }
 
 function datasetColor(value) {
-    stat_type = available_stats[current_stat_index]["type"]
+    stat_type = stats_config[current_stat_index]["type"]
     switch (datasetType) {
         case "deaths": if (stat_type == "top_delta" && value < 1) {
             // Less daily deaths = green
@@ -276,7 +312,7 @@ function loadGlobeDataForDay() {
     console.log("loadGlobeDataForDay" + current_day_index);
     var subgeo = new THREE.Geometry();
     // By default, let's show the color based on the dataset type
-    focus_stat_max_value = available_stats[current_stat_index]["max_value_fn"]();
+    focus_stat_max_value = stats_config[current_stat_index]["max_value_fn"]();
     for (location_idx = 0; location_idx < window.data["locations"].length; location_idx++) {
         // A 4th item in the values array could be for hiding a value (not drawing), to avoid counting several times
         if (window.data["locations"][location_idx]["values"][current_day_index].length > 3) {
@@ -285,8 +321,8 @@ function loadGlobeDataForDay() {
         lat = window.data["locations"][location_idx]["lat"];
         lon = window.data["locations"][location_idx]["lon"];
         dayStats = window.data["series_stats"][current_day_index];
-        day_value = available_stats[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
-        color = available_stats[current_stat_index]["color_fn"](day_value)
+        day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
+        color = stats_config[current_stat_index]["color_fn"](day_value)
         magnitude = day_value / focus_stat_max_value;
         if (magnitude > 1) {
             console.log(focus_stat_max_value, dayStats, focus_stat_max_value, magnitude);
@@ -307,32 +343,11 @@ function updateDisplays(day_index) {
         }
         dayStats = window.data["series_stats"][current_day_index];
         document.getElementById("current-day").innerHTML = dayStats["name"]
-        location_idx = dayStats[available_stats[current_stat_index]["type"]]["location_idx"]
-        stat_type = available_stats[current_stat_index]["type"]
-        stat_legend = available_stats[current_stat_index]["legend"]
-        stat_value = available_stats[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
-        if (stat_type == "top_delta"){
-            if (stat_value > 0){
-                icon = 'trending_up'
-                if (datasetType == "recovered") {
-                    // More recovered = green
-                    stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + stat_value;
-                } else {
-                    stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + stat_value;
-                }
-            } else if (stat_value == 0) {
-                icon = 'trending_flat'
-                stat_value = '<i class="material-icons grey">' + icon + '</i> ' + stat_value;
-            } else {
-                icon = 'trending_down'
-                if (datasetType == "recovered") {
-                    // Less recovered = red
-                    stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + stat_value;
-                } else {
-                    stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + stat_value;
-                }
-            }
+        if (autofocus) {
+            current_focused_location = dayStats[stats_config[current_stat_index]["type"]]["location_idx"]
         }
+        stat_legend = stats_config[current_stat_index]["legend"]
+        stat_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][current_focused_location]["values"][current_day_index])
         document.getElementById("current-stats").innerHTML = stat_value + ' ' + stat_legend
         globe.resetData();
         loadGlobeDataForDay()
