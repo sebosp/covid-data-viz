@@ -41,8 +41,6 @@ if (!Detector.webgl) {
     var colors = [0xc62828];
     var container = document.getElementById("globe-container");
 
-    var chartWidth = 200
-    var chartHeight = 200
     var chartMargin = ({top: 20, right: 20, bottom: 25, left: 50})
     var globe;
 
@@ -117,6 +115,10 @@ function updateCountryD3Graph() {
     while (myNode.firstChild) {
         myNode.removeChild(myNode.firstChild);
     }
+    // In index.html, the size of the focus-container should match this
+    var chartWidth = window.innerWidth * 0.25;
+    // Reduce the size of the chart by 4%, give some space for the title
+    var chartHeight = window.innerHeight * 0.28;
     d3_data = Array()
     columns = window.data["series_stats"].map(d => d.name);
     chartTitle = stats_config[current_stat_index]["legend"]
