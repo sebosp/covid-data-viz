@@ -34,9 +34,7 @@
             position: absolute;
             bottom: 0px;
             left: 0px;
-            width: 25%;
             background-color: none;
-            height: 32%;
             pointer-events: none;
             border-color: #b2fef7;
             border-radius: 25px;
@@ -54,6 +52,46 @@
             color: #fff;
             margin: auto;
         }
+
+        .select-wrapper input.select-dropdown {
+            height: 2rem;
+        }
+
+        .row {
+            margin-bottom: 0px !important;
+        }
+
+        .input-field {
+            margin-top: 0rem !important;
+            margin-bottom: 0rem !important;
+        }
+
+        .pagination {
+            margin-top: 0px;
+            margin-bottom: 0px;
+        }
+
+        .select-wrapper input.select-dropdown {
+            margin: 0 0 0 0 !important;
+        }
+
+        .select-wrapper .caret {
+            margin: 0 0 0 0 !important;
+        }
+
+        .select-wrapper input.select-dropdown {
+            font-size: 15px;
+            height: 2rem !important;
+        }
+
+        .dropdown-content li>a,
+        .dropdown-content li>span {
+            font-size: 15px;
+        }
+
+        ul:not(.browser-default) {
+            margin: 0 0 0 0;
+        }
     </style>
     <!--Import Google Icon Font-->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -68,16 +106,15 @@
 <body>
     <header>
         <div class="row teal darken-3">
-            <div class="input-field col s4 m2">
+            <div class="input-field col s4 m4 l2">
                 <select id="datasetSelection" onchange="changeDataSet()">
                     <option selected value="confirmed">Confirmed</option>
                     <option value="deaths">Deaths</option>
                     <option value="recovered">Recovered</option>
                 </select>
-                <label>Data Set:</label>
             </div>
-            <div class="col s3 m1">
-                <h6 class="center" id="current-stats"></h6>
+            <div class="col s4 m4 center">
+                <span id="current-stats"></span>
             </div>
             <div class="col s1 m1">
                 <ul class="pagination">
@@ -85,16 +122,8 @@
                         <a href="#!" onclick="incrementDayBy(-1)"><i class="material-icons">chevron_left</i></a>
                     </li>
             </div>
-            <div class="col s3 m1">
+            <div class="col s1 m2">
                 <h6 class="center" id="current-day"></h6>
-                <ul>
-                    <li id="incrementDay" class="waves-effect">
-                    <a href="#!" title="Toggle Autofocus" onclick="toggleAutoFocus()"><i id="autofocus" class="material-icons">center_focus_strong</i></a>
-                    </li>
-                    <li id="incrementDay" class="waves-effect">
-                    <a href="#!" title="Toggle Cummulative/Daily/Delta" onclick="toggleStatType()"><i id="stat_type" class="material-icons">present_to_all</i></a>
-                    </li>
-                </ul>
             </div>
             <div class="col s1 m1">
                 <ul class="pagination">
@@ -105,12 +134,33 @@
                 </ul>
             </div>
         </div>
+        <div class="row teal darken-3">
+            <div class="input-field col s4 m4 l2">
+                <select id="aggregateSelection" onchange="changeAggregateType()">
+                    <option selected value="0">Cumulative</option>
+                    <option value="1">Daily</option>
+                    <option value="2">Daily Delta</option>
+                </select>
+            </div>
+            <div class="input-field col s6 m6 l6">
+            </div>
+            <div class="col s1 m1 l1">
+                <ul>
+                    <li id="incrementDay" class="waves-effect">
+                        <a href="#!" title="Toggle Autofocus" onclick="toggleAutoFocus()"><i id="autofocus"
+                                class="material-icons">center_focus_strong</i></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </header>
     <div id="globe-container"></div>
-    <div class="teal darken-4" id="focus-container">
-        <div id="focus-region">
-        </div>
-        <div id="region-graph">
+    <div class="row">
+    <div class="teal darken-4 col s4 m4 l4" id="focus-container">
+            <div id="focus-region">
+            </div>
+            <div id="region-graph">
+            </div>
         </div>
     </div>
     <div id="scope-container">
@@ -138,6 +188,7 @@
         var datasetSelectElement;
         document.addEventListener('DOMContentLoaded', function () {
             datasetSelectElement = M.FormSelect.init(document.querySelector('#datasetSelection'), {});
+            datasetSelectElement = M.FormSelect.init(document.querySelector('#aggregateSelection'), {});
         });
     </script>
 </body>
