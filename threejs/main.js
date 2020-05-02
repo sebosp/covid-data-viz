@@ -1,14 +1,15 @@
 if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
-    var current_day_index = 84;
+    var current_day_index = 99;
     var current_focused_location = 0;
     // By default focus the region with the top cummulative value
     var current_stat_index = 0;
     var stats_config = [
         {
             "type": "top_cumulative",
-            "legend": "Cumulative Cases",
+            "series_stats_key": "cumulative_global",
+            "legend": "Cases",
             "icon": "present_to_all",
             "min_value_fn": function () {return 0},
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_cumulative"]["value"]},
@@ -17,7 +18,8 @@ if (!Detector.webgl) {
         },
         {
             "type": "top_day",
-            "legend": "Daily Cases",
+            "series_stats_key": "day_global",
+            "legend": "Cases",
             "icon": "today",
             "min_value_fn": function () {return 0},
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_day"]["value"]},
@@ -26,7 +28,8 @@ if (!Detector.webgl) {
         },
         {
             "type": "top_delta",
-            "legend": "Trend In Cases",
+            "series_stats_key": "delta_global",
+            "legend": "Cases",
             "icon": "change_history",
             // The trend can be negative, so we need to find the minimum value
             "min_value_fn": function () {
@@ -41,7 +44,8 @@ if (!Detector.webgl) {
     var colors = [0xc62828];
     var container = document.getElementById("globe-container");
 
-    var chartMargin = ({top: 20, right: 20, bottom: 25, left: 50})
+    var svg;
+    var chartMargin = ({top: 20, right: 20, bottom: 25, left: 60})
     var globe;
 
     // Add a bit of offset so that we can see the magnitude (z) axis when we use the automatic globe positioning
@@ -49,14 +53,14 @@ if (!Detector.webgl) {
     var target_offset = 0.0
 
     document.addEventListener('DOMContentLoaded', function () {
-        var elems = document.querySelectorAll('.datepicker');
-        var instances = M.Datepicker.init(elems,
+        M.Datepicker.init(document.querySelectorAll('.datepicker'),
             {
                 minDate: new Date("2020-01-22"),
                 maxDate: new Date("2020-04-02"),
                 onSelect: changeDataFromDatePicker,
                 autoClose: true,
             })
+        M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'), {});
     });
     var datasetType = "confirmed"
     changeDataSet();
@@ -71,7 +75,8 @@ function toggleAutoFocus() {
 }
 
 function toggleStatType() {
-    current_stat_index = (current_stat_index + 1) % stats_config.length;
+    select = document.getElementById("aggregateSelection")
+    current_stat_index = select.options[select.selectedIndex].value
     document.getElementById("stat_type").innerHTML = stats_config[current_stat_index]["icon"];
     updateDisplays()
 }
@@ -111,6 +116,11 @@ function translateLatLngToGlobeTarget(lat, lng) {
 
 function updateCountryD3Graph() {
     console.log("Updating Coutry D3 Graph: ", current_focused_location);
+    if (! autofocus) {
+        // There's no need to delete and recreate, autofocus _may_ change the current country.
+        // TODO: cutOffDate line removal
+        // TODO: Check if focus changed from previous date to current date
+    }
     var myNode = document.getElementById("region-graph");
     while (myNode.firstChild) {
         myNode.removeChild(myNode.firstChild);
@@ -148,7 +158,7 @@ function updateCountryD3Graph() {
         .call(d3.axisBottom(xScale).ticks(chartWidth / 80).tickSizeOuter(0))
     yAxis = g => g
         .attr("transform", `translate(${chartMargin.left},0)`)
-        .call(d3.axisLeft(yScale))
+        .call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")))
         .call(g => g.select(".domain").remove())
         .call(g => g.select(".tick:last-of-type text").clone()
             .attr("x", 3)
@@ -160,7 +170,7 @@ function updateCountryD3Graph() {
         .x((_d, i) => xScale(d3_data.dates[i]))
         .y(d => yScale(d));
     console.log("Creating SVG");
-    const svg = d3.select("#region-graph")
+    svg = d3.select("#region-graph")
         .append("div")
         // Container class to make it responsive.
         .classed("svg-container", true)
@@ -201,17 +211,18 @@ function updateCountryD3Graph() {
         .attr("x1", xScale(cutoffDate))
         .attr("x2", xScale(cutoffDate))
         .attr("y1", yScale.range()[0])
-        .attr("y2", yScale.range()[1] + yScale.range()[1] / 10);
+        .attr("y2", yScale.range()[1] + yScale.range()[1] / 10)
+        .attr("id", "cutoffDate");
     stat_type = stats_config[current_stat_index]["type"]
     if (stat_type == "top_delta") {
-    svg.append("line")
-        .style("stroke", "white")
-        .style("stroke-dasharray", "2px")
-        .style("stroke-opacity", "0.5")
-        .attr("x1", xScale.range()[0])
-        .attr("x2", xScale.range()[1])
-        .attr("y1", yScale(0))
-        .attr("y2", yScale(0))
+        svg.append("line")
+            .style("stroke", "white")
+            .style("stroke-dasharray", "2px")
+            .style("stroke-opacity", "0.5")
+            .attr("x1", xScale.range()[0])
+            .attr("x2", xScale.range()[1])
+            .attr("y1", yScale(0))
+            .attr("y2", yScale(0))
     }
 
 }
@@ -249,7 +260,7 @@ function centerLatLongWithMax() {
     //         },
     //     },
     //     "total": 555
-    // }]}
+    // }]
     dayStats = window.data["series_stats"][current_day_index]
     if (autofocus) {
         current_focused_location = dayStats[stats_config[current_stat_index]["type"]]["location_idx"]
@@ -344,13 +355,14 @@ function updateDisplays(day_index) {
             current_day_index = day_index % window.data["series_stats"].length;
         }
         dayStats = window.data["series_stats"][current_day_index];
-        document.getElementById("current-day").innerHTML = dayStats["name"]
+        formattedDayName = dayStats["name"].replace(/[0-9]*-([0-9]*)-([0-9]*)/, "$2/$1")
+        document.getElementById("current-day").innerHTML = formattedDayName
         if (autofocus) {
             current_focused_location = dayStats[stats_config[current_stat_index]["type"]]["location_idx"]
         }
-        stat_legend = stats_config[current_stat_index]["legend"]
-        stat_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][current_focused_location]["values"][current_day_index])
-        document.getElementById("current-stats").innerHTML = stat_value + ' ' + stat_legend
+        global_stat_legend = stats_config[current_stat_index]["legend"]
+        global_stat_value = d3.format(".2s")(dayStats[stats_config[current_stat_index]["series_stats_key"]])
+        document.getElementById("current-stats").innerHTML = global_stat_value + ' ' + global_stat_legend
         globe.resetData();
         loadGlobeDataForDay()
         globe.createPoints();
