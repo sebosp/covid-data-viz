@@ -95,8 +95,12 @@ function clearData() {
 }
 
 function incrementDayBy(offset) {
+    document.getElementById("decrementDay").removeAttribute("onclick");
+    document.getElementById("incrementDay").removeAttribute("onclick");
     current_day_index = (current_day_index + offset + window.data["series_stats"].length) % window.data["series_stats"].length;
     updateDisplays();
+    document.getElementById("decrementDay").setAttribute("onclick", "incrementDayBy(-1)");
+    document.getElementById("incrementDay").setAttribute("onclick", "incrementDayBy(1)");
 }
 
 function translateGlobeTargetToLatLng() {
@@ -383,7 +387,7 @@ function loadData(url) {
     TWEEN.start();
     xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
-    xhr.onreadystatechange = function (e) {
+    xhr.onreadystatechange = function (_e) {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
                 window.data = JSON.parse(xhr.responseText);
