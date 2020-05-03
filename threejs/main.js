@@ -119,7 +119,6 @@ function translateLatLngToGlobeTarget(lat, lng) {
 }
 
 function updateCountryD3Graph() {
-    console.log("Updating Coutry D3 Graph: ", current_focused_location);
     if (! autofocus) {
         // There's no need to delete and recreate, autofocus _may_ change the current country.
         // TODO: cutOffDate line removal
@@ -173,7 +172,6 @@ function updateCountryD3Graph() {
         .defined(d => !isNaN(d))
         .x((_d, i) => xScale(d3_data.dates[i]))
         .y(d => yScale(d));
-    console.log("Creating SVG");
     svg = d3.select("#region-graph")
         .append("div")
         // Container class to make it responsive.
