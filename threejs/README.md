@@ -23,4 +23,5 @@ day with icon `change_history`.
 - Add screenshots
 - Dropdown with icons for selection with labels.
 - Download the data from the git repo instead of needing git pull
+- When clicking on the dropdowns, down/up arrow activates it, which collides with the zoom of the globe
 - Doesn't work on iPhone
