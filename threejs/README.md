@@ -24,4 +24,5 @@ day with icon `change_history`.
 - Dropdown with icons for selection with labels.
 - Download the data from the git repo instead of needing git pull
 - When clicking on the dropdowns, down/up arrow activates it, which collides with the zoom of the globe
+- Add a country dropdown to jump manually and see stats
 - Doesn't work on iPhone

@@ -66,10 +66,98 @@ if (!Detector.webgl) {
                 onSelect: changeDataFromDatePicker,
                 autoClose: true,
             })
-        M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'), {});
+        M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'), {autoTrigger: false});
     });
     var datasetType = "confirmed"
     changeDataSet();
+}
+
+
+function onMouseUp(_event) {
+    container.removeEventListener('mousemove', onMouseMove, false);
+    container.removeEventListener('mouseup', onMouseUp, false);
+    container.removeEventListener('mouseout', onMouseOut, false);
+    container.removeEventListener('touchmove', onMouseMove, false);
+    container.removeEventListener('touchend', onMouseUp, false);
+    container.removeEventListener('touchcancel', onMouseOut, false);
+    container.style.cursor = 'auto';
+}
+
+function onMouseMove(event) {
+    mouse_coords = {};
+    if (event.type == "touchmove") {
+        mouse_coords.x = - event.changedTouches[0].clientX;
+        mouse_coords.y = event.changedTouches[0].clientY;
+    } else {
+        mouse_coords.x = - event.clientX;
+        mouse_coords.y = event.clientY;
+    }
+    globe.onMouseMove(mouse_coords);
+}
+
+function onMouseOut(_event) {
+    container.removeEventListener('mousemove', onMouseMove, false);
+    container.removeEventListener('mouseup', onMouseUp, false);
+    container.removeEventListener('mouseout', onMouseOut, false);
+    container.removeEventListener('touchmove', onMouseMove, false);
+    container.removeEventListener('touchend', onMouseUp, false);
+    container.removeEventListener('touchcancel', onMouseOut, false);
+}
+
+function onMouseDown(event) {
+    event.preventDefault();
+
+    container.addEventListener('mousemove', onMouseMove, false);
+    container.addEventListener('mouseup', onMouseUp, false);
+    container.addEventListener('mouseout', onMouseOut, false);
+    container.addEventListener('touchmove', onMouseMove, false);
+    container.addEventListener('touchend', onMouseUp, false);
+    container.addEventListener('touchcancel', onMouseOut, false);
+
+    mouse_coords = {};
+    if (event.type == "touchstart") {
+        mouse_coords.x = - event.changedTouches[0].clientX;
+        mouse_coords.y = event.changedTouches[0].clientY;
+    } else {
+        mouse_coords.x = - event.clientX;
+        mouse_coords.y = event.clientY;
+    }
+    globe.onMouseDown(mouse_coords);
+    container.style.cursor = 'move';
+}
+
+// Debounce a function
+function debounce(func, time) {
+    var time = time || 100; // 100 by default if no param
+    var timer;
+    return function (event) {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(func, time, event);
+    };
+}
+
+function onWindowResize(_event) {
+    globe.onWindowResize();
+    // Force the update to take place on the Region chart
+    // We are debouncing the event, waiting .5 seconds to redraw to avoid
+    // performance costs or drawing every resize event
+    debounce(updateCountryD3Graph(true), 500);
+}
+
+function addEventListeners() {
+    container.addEventListener('touchstart', onMouseDown, false);
+    container.addEventListener('mousedown', onMouseDown, false);
+    container.addEventListener('wheel', globe.onMouseWheel, false);
+    document.addEventListener('keydown', globe.onDocumentKeyDown, false);
+    window.addEventListener('resize', onWindowResize, false);
+
+    container.addEventListener('mouseover', function () {
+        globe.overRenderer = true;
+    }, false);
+
+    container.addEventListener('mouseout', function () {
+        globe.overRenderer = false;
+    }, false);
 }
 
 function toggleAutoFocus() {
@@ -123,8 +211,8 @@ function translateLatLngToGlobeTarget(lat, lng) {
     }
 }
 
-function updateCountryD3Graph() {
-    if (prev_foculed_location != current_focused_location || current_stat_index != prev_stat_index) {
+function updateCountryD3Graph(force = false) {
+    if (prev_foculed_location != current_focused_location || current_stat_index != prev_stat_index || force) {
         var myNode = document.getElementById("region-graph");
         while (myNode.firstChild) {
             myNode.removeChild(myNode.firstChild);
@@ -233,6 +321,12 @@ function updateCountryD3Graph() {
 
 }
 
+function centerLatLong(lat, lon) {
+    globe_center_x_y = translateLatLngToGlobeTarget(lat, lon);
+    globe.target.x = globe_center_x_y.x;
+    globe.target.y = globe_center_x_y.y;
+}
+
 function centerLatLongWithMax() {
     // {"locations": [{
     //     "lat": 10,
@@ -303,10 +397,7 @@ function centerLatLongWithMax() {
     formattedStatValue = d3.format(",")(stat_value)
     document.getElementById("focus-region").innerHTML = location_name + ' [' + formattedStatValue + '] ' + stat_legend
     updateCountryD3Graph();
-    globe_center_x_y = translateLatLngToGlobeTarget(lat, lon);
-    globe.target.x = globe_center_x_y.x;
-    globe.target.y = globe_center_x_y.y;
-
+    centerLatLong(lat, lon);
 }
 
 function datasetColor(value) {
@@ -387,6 +478,7 @@ function loadData(url) {
     clearData();
     var xhr;
     globe = new DAT.Globe(container, datasetColor);
+    addEventListeners();
     animate();
     TWEEN.start();
     xhr = new XMLHttpRequest();

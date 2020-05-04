@@ -11,6 +11,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Modified by Cathal Mc Daid /@mcdaidc
+ * Modified by Sebastian Ospina github.com/sebosp
  */
 
 var DAT = DAT || {};
@@ -69,22 +70,19 @@ DAT.Globe = function (container, colorFn) {
     };
 
     var camera, scene, renderer, w, h;
-    var mesh, atmosphere, point;
+    var mesh, point;
 
     var overRenderer;
 
     var imgDir = 'images/';
 
     var curZoomSpeed = 0;
-    var zoomSpeed = 50;
 
-    var mouse = {x: 0, y: 0}, mouseOnDown = {x: 0, y: 0};
     var rotation = {x: 0, y: 0},
         target = {x: 0.0, y: 0.0},
         targetOnDown = {x: 0, y: 0};
 
     var distance = 100000, distanceTarget = 100000;
-    var padding = 40;
     var PI_HALF = Math.PI / 2;
 
     function init() {
@@ -181,22 +179,7 @@ DAT.Globe = function (container, colorFn) {
         container.targetOnDown = targetOnDown;
     }
     this.addEventListeners = function () {
-
         container.appendChild(renderer.domElement);
-
-        container.addEventListener('touchstart', this.onMouseDown, false);
-        container.addEventListener('mousedown', this.onMouseDown, false);
-        container.addEventListener('mousewheel', this.onMouseWheel, false);
-        document.addEventListener('keydown', this.onDocumentKeyDown, false);
-        window.addEventListener('resize', this.onWindowResize, false);
-
-        container.addEventListener('mouseover', function () {
-            overRenderer = true;
-        }, false);
-
-        container.addEventListener('mouseout', function () {
-            overRenderer = false;
-        }, false);
     }
 
     this.addData = function (data, opts) {
@@ -251,7 +234,7 @@ DAT.Globe = function (container, colorFn) {
             this._baseGeometry = subgeo;
         }
     };
-    this.setBaseGeometry = function(subgeo) {
+    this.setBaseGeometry = function (subgeo) {
         this._baseGeometry = subgeo;
     }
 
@@ -312,65 +295,25 @@ DAT.Globe = function (container, colorFn) {
         THREE.GeometryUtils.merge(subgeo, point);
     }
 
-    this.onMouseDown = function (event) {
-        event.preventDefault();
-
-        container.addEventListener('mousemove', globe.onMouseMove, false);
-        container.addEventListener('mouseup', globe.onMouseUp, false);
-        container.addEventListener('mouseout', globe.onMouseOut, false);
-        container.addEventListener('touchmove', globe.onMouseMove, false);
-        container.addEventListener('touchend', globe.onMouseUp, false);
-        container.addEventListener('touchcancel', globe.onMouseOut, false);
-
-        if (event.type == "touchstart") {
-            mouseOnDown.x = - event.changedTouches[0].clientX;
-            mouseOnDown.y = event.changedTouches[0].clientY;
-        } else {
-            mouseOnDown.x = - event.clientX;
-            mouseOnDown.y = event.clientY;
-        }
+    this.onMouseDown = function (mouse_coords) {
         this.targetOnDown.x = this.target.x;
         this.targetOnDown.y = this.target.y;
-
-        container.style.cursor = 'move';
-    }
-
-    this.onMouseMove = function (event) {
-        if (event.type == "touchmove") {
-            mouse.x = - event.changedTouches[0].clientX;
-            mouse.y = event.changedTouches[0].clientY;
-        } else {
-            mouse.x = - event.clientX;
-            mouse.y = event.clientY;
-        }
-
+        this.mouseOnDown.x = mouse_coords.x;
+        this.mouseOnDown.y = mouse_coords.y;
+    };
+    this.onMouseMove = function (mouse_coords) {
+        this.mouse.x = mouse_coords.x;
+        this.mouse.y = mouse_coords.y;
         var zoomDamp = distance / 1000;
 
-        this.target.x = this.targetOnDown.x + (mouse.x - mouseOnDown.x) * 0.005 * zoomDamp;
-        this.target.y = this.targetOnDown.y + (mouse.y - mouseOnDown.y) * 0.005 * zoomDamp;
+        this.target.x = this.targetOnDown.x + (this.mouse.x - this.mouseOnDown.x) * 0.005 * zoomDamp;
+        this.target.y = this.targetOnDown.y + (this.mouse.y - this.mouseOnDown.y) * 0.005 * zoomDamp;
 
         this.target.y = this.target.y > PI_HALF ? PI_HALF : this.target.y;
         this.target.y = this.target.y < - PI_HALF ? - PI_HALF : this.target.y;
     }
 
-    this.onMouseUp = function (_event) {
-        container.removeEventListener('mousemove', globe.onMouseMove, false);
-        container.removeEventListener('mouseup', globe.onMouseUp, false);
-        container.removeEventListener('mouseout', globe.onMouseOut, false);
-        container.removeEventListener('touchmove', globe.onMouseMove, false);
-        container.removeEventListener('touchend', globe.onMouseUp, false);
-        container.removeEventListener('touchcancel', globe.onMouseOut, false);
-        container.style.cursor = 'auto';
-    }
 
-    this.onMouseOut = function (_event) {
-        container.removeEventListener('mousemove', globe.onMouseMove, false);
-        container.removeEventListener('mouseup', globe.onMouseUp, false);
-        container.removeEventListener('mouseout', globe.onMouseOut, false);
-        container.removeEventListener('touchmove', globe.onMouseMove, false);
-        container.removeEventListener('touchend', globe.onMouseUp, false);
-        container.removeEventListener('touchcancel', globe.onMouseOut, false);
-    }
 
     this.onMouseWheel = function (event) {
         event.preventDefault();
@@ -393,7 +336,7 @@ DAT.Globe = function (container, colorFn) {
         }
     }
 
-    this.onWindowResize = function (_event) {
+    this.onWindowResize = function () {
         globe.camera.aspect = window.innerWidth / window.innerHeight;
         globe.camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -424,7 +367,10 @@ DAT.Globe = function (container, colorFn) {
     }
 
     init();
+    this.mouse = {x: 0, y: 0};
+    this.mouseOnDown = {x: 0, y: 0};
     this.target = target;
+    this.targetOnDown = targetOnDown;
     this.camera = camera;
     this.rotation = rotation;
     this.addEventListeners();
@@ -461,7 +407,7 @@ DAT.Globe = function (container, colorFn) {
 
     //workaround for three.js bug
     function removeObject(scene, object) {
-        var o, ol, zobject;
+        var o, zobject;
         if (object instanceof THREE.Mesh) {
             for (o = scene.__webglObjects.length - 1; o >= 0; o--) {
                 zobject = scene.__webglObjects[o].object;
