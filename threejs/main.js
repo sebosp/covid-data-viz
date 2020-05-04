@@ -2,9 +2,11 @@ if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
     var current_day_index = 99;
+    var prev_foculed_location = -1;
     var current_focused_location = 0;
     // By default focus the region with the top cummulative value
     var current_stat_index = 0;
+    var prev_stat_index = -1;
     var stats_config = [
         {
             "type": "top_cumulative",
@@ -44,8 +46,12 @@ if (!Detector.webgl) {
     var colors = [0xc62828];
     var container = document.getElementById("globe-container");
 
+    // D3 nhart Related variables
     var svg;
     var chartMargin = ({top: 20, right: 20, bottom: 25, left: 60})
+    var chartColumns = Array()
+    var d3_data = Array()
+
     var globe;
 
     // Add a bit of offset so that we can see the magnitude (z) axis when we use the automatic globe positioning
@@ -74,10 +80,9 @@ function toggleAutoFocus() {
     }
 }
 
-function toggleStatType() {
+function changeAggregateType() {
     select = document.getElementById("aggregateSelection")
     current_stat_index = select.options[select.selectedIndex].value
-    document.getElementById("stat_type").innerHTML = stats_config[current_stat_index]["icon"];
     updateDisplays()
 }
 
@@ -119,91 +124,98 @@ function translateLatLngToGlobeTarget(lat, lng) {
 }
 
 function updateCountryD3Graph() {
-    if (! autofocus) {
-        // There's no need to delete and recreate, autofocus _may_ change the current country.
-        // TODO: cutOffDate line removal
-        // TODO: Check if focus changed from previous date to current date
+    if (prev_foculed_location != current_focused_location || current_stat_index != prev_stat_index) {
+        var myNode = document.getElementById("region-graph");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+        d3_data = {
+            y: stats_config[current_stat_index]["legend"],
+            series: [
+                {
+                    name: window.data["locations"][current_focused_location]["location"],
+                    values: window.data["locations"][current_focused_location]["values"].map(
+                        stats_config[current_stat_index]["data_fn"]
+                    ),
+                }
+            ],
+            dates: chartColumns.map(d3.utcParse("%y-%m-%d"))
+        };
+        // In index.html, the size of the focus-container should match this
+        var chartWidth = window.innerWidth * 0.25;
+        // Reduce the size of the chart by 4%, give some space for the title
+        var chartHeight = window.innerHeight * 0.28;
+        xScale = d3.scaleUtc()
+            .domain(d3.extent(d3_data.dates))
+            .range([chartMargin.left, chartWidth - chartMargin.right])
+        yScale = d3.scaleLinear()
+            .domain([
+                stats_config[current_stat_index]["min_value_fn"](),
+                d3.max(d3_data.series, d => d3.max(d.values)) // Maybe use max_value_fn
+            ]).nice()
+            .range([chartHeight - chartMargin.bottom, chartMargin.top])
+        xAxis = g => g
+            .attr("transform", `translate(0,${chartHeight - chartMargin.bottom})`)
+            .call(d3.axisBottom(xScale).ticks(chartWidth / 80).tickSizeOuter(0))
+        yAxis = g => g
+            .attr("transform", `translate(${chartMargin.left},0)`)
+            .call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")))
+            .call(g => g.select(".domain").remove())
+            .call(g => g.select(".tick:last-of-type text").clone()
+                .attr("x", 3)
+                .attr("text-anchor", "start")
+                .attr("font-weight", "bold")
+                .text(d3_data.y))
+        line = d3.line()
+            .defined(d => !isNaN(d))
+            .x((_d, i) => xScale(d3_data.dates[i]))
+            .y(d => yScale(d));
+        svg = d3.select("#region-graph")
+            .append("div")
+            // Container class to make it responsive.
+            .classed("svg-container", true)
+            .append("svg")
+            // Responsive SVG needs these 2 attributes and no width and height attr.
+            //.attr("viewBox", "0 0 600 400")
+            // Class to make it responsive.
+            .classed("svg-content-responsive", true)
+            // Fill with a rectangle for visualization.
+            .attr("viewBox", [0, 0, chartWidth, chartHeight])
+            .attr("preserveAspectRatio", "xMinYMin meet")
+            .style("overflow", "visible");
+
+        svg.append("g")
+            .call(xAxis);
+
+        svg.append("g")
+            .call(yAxis);
+
+        svg.append("g")
+            .attr("fill", "none")
+            .attr("stroke", "#" + datasetColor().getHexString())
+            .attr("stroke-chartWidth", 1.5)
+            .attr("stroke-linejoin", "round")
+            .attr("stroke-linecap", "round")
+            .selectAll("path")
+            .data(d3_data.series)
+            .join("path")
+            .style("mix-blend-mode", "multiply")
+            .attr("d", d => line(d.values));
+
+        if (stat_type == "top_delta") {
+            svg.append("line")
+                .style("stroke", "white")
+                .style("stroke-dasharray", "2px")
+                .style("stroke-opacity", "0.5")
+                .attr("x1", xScale.range()[0])
+                .attr("x2", xScale.range()[1])
+                .attr("y1", yScale(0))
+                .attr("y2", yScale(0))
+        }
     }
-    var myNode = document.getElementById("region-graph");
-    while (myNode.firstChild) {
-        myNode.removeChild(myNode.firstChild);
+    if (document.getElementById("cutoffDate") != null) {
+        document.getElementById("cutoffDate").remove();
     }
-    // In index.html, the size of the focus-container should match this
-    var chartWidth = window.innerWidth * 0.25;
-    // Reduce the size of the chart by 4%, give some space for the title
-    var chartHeight = window.innerHeight * 0.28;
-    d3_data = Array()
-    columns = window.data["series_stats"].map(d => d.name);
-    chartTitle = stats_config[current_stat_index]["legend"]
-    d3_data = {
-        y: chartTitle,
-        series: [
-            {
-                name: window.data["locations"][current_focused_location]["location"],
-                values: window.data["locations"][current_focused_location]["values"].map(
-                    stats_config[current_stat_index]["data_fn"]
-                ),
-            }
-        ],
-        dates: columns.map(d3.utcParse("%y-%m-%d"))
-    };
-    xScale = d3.scaleUtc()
-        .domain(d3.extent(d3_data.dates))
-        .range([chartMargin.left, chartWidth - chartMargin.right])
-    yScale = d3.scaleLinear()
-        .domain([
-            stats_config[current_stat_index]["min_value_fn"](),
-            d3.max(d3_data.series, d => d3.max(d.values)) // Maybe use max_value_fn
-        ]).nice()
-        .range([chartHeight - chartMargin.bottom, chartMargin.top])
-    xAxis = g => g
-        .attr("transform", `translate(0,${chartHeight - chartMargin.bottom})`)
-        .call(d3.axisBottom(xScale).ticks(chartWidth / 80).tickSizeOuter(0))
-    yAxis = g => g
-        .attr("transform", `translate(${chartMargin.left},0)`)
-        .call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")))
-        .call(g => g.select(".domain").remove())
-        .call(g => g.select(".tick:last-of-type text").clone()
-            .attr("x", 3)
-            .attr("text-anchor", "start")
-            .attr("font-weight", "bold")
-            .text(d3_data.y))
-    line = d3.line()
-        .defined(d => !isNaN(d))
-        .x((_d, i) => xScale(d3_data.dates[i]))
-        .y(d => yScale(d));
-    svg = d3.select("#region-graph")
-        .append("div")
-        // Container class to make it responsive.
-        .classed("svg-container", true)
-        .append("svg")
-        // Responsive SVG needs these 2 attributes and no width and height attr.
-        //.attr("viewBox", "0 0 600 400")
-        // Class to make it responsive.
-        .classed("svg-content-responsive", true)
-        // Fill with a rectangle for visualization.
-        .attr("viewBox", [0, 0, chartWidth, chartHeight])
-        .attr("preserveAspectRatio", "xMinYMin meet")
-        .style("overflow", "visible");
-
-    svg.append("g")
-        .call(xAxis);
-
-    svg.append("g")
-        .call(yAxis);
-
-    svg.append("g")
-        .attr("fill", "none")
-        .attr("stroke", "#" + datasetColor().getHexString())
-        .attr("stroke-chartWidth", 1.5)
-        .attr("stroke-linejoin", "round")
-        .attr("stroke-linecap", "round")
-        .selectAll("path")
-        .data(d3_data.series)
-        .join("path")
-        .style("mix-blend-mode", "multiply")
-        .attr("d", d => line(d.values));
-
     dayInfo = window.data["series_stats"][current_day_index]
     cutoffDate = d3.utcParse("%y-%m-%d")(dayInfo["name"])
     svg.append("line")
@@ -216,16 +228,8 @@ function updateCountryD3Graph() {
         .attr("y2", yScale.range()[1] + yScale.range()[1] / 10)
         .attr("id", "cutoffDate");
     stat_type = stats_config[current_stat_index]["type"]
-    if (stat_type == "top_delta") {
-        svg.append("line")
-            .style("stroke", "white")
-            .style("stroke-dasharray", "2px")
-            .style("stroke-opacity", "0.5")
-            .attr("x1", xScale.range()[0])
-            .attr("x2", xScale.range()[1])
-            .attr("y1", yScale(0))
-            .attr("y2", yScale(0))
-    }
+    prev_foculed_location = current_focused_location
+    prev_stat_index = current_stat_index
 
 }
 
@@ -295,7 +299,9 @@ function centerLatLongWithMax() {
             }
         }
     }
-    document.getElementById("focus-region").innerHTML = location_name + ' [' + stat_value + '] ' + stat_legend
+    // Let's format the number to look like X,YYY
+    formattedStatValue = d3.format(",")(stat_value)
+    document.getElementById("focus-region").innerHTML = location_name + ' [' + formattedStatValue + '] ' + stat_legend
     updateCountryD3Graph();
     globe_center_x_y = translateLatLngToGlobeTarget(lat, lon);
     globe.target.x = globe_center_x_y.x;
@@ -389,6 +395,7 @@ function loadData(url) {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
                 window.data = JSON.parse(xhr.responseText);
+                chartColumns = window.data["series_stats"].map(d => d.name);
                 document.body.style.backgroundImage = "none"; // remove loading
                 updateDisplays();
             }
