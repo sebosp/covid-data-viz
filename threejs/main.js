@@ -1,12 +1,13 @@
 if (!Detector.webgl) {
     Detector.addGetWebGLMessage();
 } else {
-    var current_day_index = 99;
+    var current_day_index = 0;
     var prev_foculed_location = -1;
     var current_focused_location = 0;
     // By default focus the region with the top cummulative value
     var current_stat_index = 0;
     var prev_stat_index = -1;
+    var RADIAN = 180 / Math.PI;
     var stats_config = [
         {
             "type": "top_cumulative",
@@ -54,10 +55,6 @@ if (!Detector.webgl) {
 
     var globe;
 
-    // Add a bit of offset so that we can see the magnitude (z) axis when we use the automatic globe positioning
-    // otherwise we are straight on top of the magnitude bar and it's not possible to see the height
-    var target_offset = 0.0
-
     document.addEventListener('DOMContentLoaded', function () {
         M.Datepicker.init(document.querySelectorAll('.datepicker'),
             {
@@ -72,6 +69,41 @@ if (!Detector.webgl) {
     changeDataSet();
 }
 
+function findClosestRegion(target_lat, target_lng, threshold = 5) {
+    // Returns the closest registered region given an input lat, lng and
+    // an optional threshold in degrees.
+    // The threshold is used so that we do not show a region when the focus is,
+    // for example, in the middle of the ocean
+    console.log("findClosestRegion to lat: ", target_lat, "lng: ", target_lng);
+    countrieInThreshold = Array();
+    matchingLocations = window.data["locations"].map(function (_loc, idx) {
+        lat_distance = Math.abs(target_lat - window.data["locations"][idx]["lat"])
+        lng_distance = Math.abs(target_lng - window.data["locations"][idx]["lon"])
+        if (lat_distance < threshold && lng_distance < threshold * 2) {
+            // Here, let's imagine there is no curvature/height, because otherwise we need a real solution for lat/lng distance.
+            target_idx_lat_rad = target_lat / RADIAN
+            target_idx_lng_rad = target_lng / RADIAN
+            current_idx_lat_rad = window.data["locations"][idx]["lat"] / RADIAN
+            current_idx_lng_rad = window.data["locations"][idx]["lon"] / RADIAN
+            delta_lat_rad = current_idx_lat_rad - target_idx_lat_rad
+            delta_lng_rad = current_idx_lng_rad - target_idx_lng_rad
+            // Haversine:
+            rad_distance = 2 * Math.asin(Math.sqrt(Math.sin(delta_lat_rad / 2) ** 2 + Math.cos(target_idx_lat_rad) * Math.cos(current_idx_lat_rad) * Math.sin(delta_lng_rad / 2) ** 2))
+            // This rad_distance could be translated to kilometers, mulitplied by 6371 (radios of earth), but this is unnecessary.
+            return {"idx": idx, "matches": true, "rad_distance": rad_distance};
+        } else {
+            return {"idx": idx, "matches": false}
+        }
+    });
+    matchingLocations = matchingLocations.filter(loc => loc.matches);
+    console.log("Locations within threshold: ", matchingLocations);
+    if (matchingLocations.length == 0) {
+        return null
+    }
+    closest_idx = matchingLocations.reduce((acc, val) => acc["rad_distance"] > val["rad_distance"]?val:acc);
+    console.log("Closest idx: ", closest_idx["idx"]);
+    return closest_idx["idx"]
+}
 
 function onMouseUp(_event) {
     container.removeEventListener('mousemove', onMouseMove, false);
@@ -81,6 +113,15 @@ function onMouseUp(_event) {
     container.removeEventListener('touchend', onMouseUp, false);
     container.removeEventListener('touchcancel', onMouseOut, false);
     container.style.cursor = 'auto';
+    current_coords = translateGlobeTargetToLatLng()
+    closest_region = findClosestRegion(current_coords.lat, current_coords.lng);
+    if (closest_region != null) {
+        current_focused_location = closest_region
+        if (autofocus) {
+            autofocus = false;
+        }
+        updateDisplays();
+    }
 }
 
 function onMouseMove(event) {
@@ -196,15 +237,19 @@ function incrementDayBy(offset) {
     document.getElementById("incrementDay").setAttribute("onclick", "incrementDayBy(1)");
 }
 
-function translateGlobeTargetToLatLng() {
+function translateGlobeTargetToLatLng(target_offset = 0.0) {
+    // The offset allows to appreciate a bit the magnitude (z axis) , otherwise the globe is centered on
+    // a point on top of the z axis (magnitude) and so the value is not appreciable.
     return {
         lat: ((globe.target.y + target_offset) * 90) / (Math.PI / 2),
         lng: ((globe.target.x - target_offset - ((Math.PI / 2) * 3)) * 180) / Math.PI,
     }
 }
 
-function translateLatLngToGlobeTarget(lat, lng) {
+function translateLatLngToGlobeTarget(lat, lng, target_offset = 0.0) {
     // Translates from Latitude,Longitude to the coordinates of the globe camera
+    // The offset allows to appreciate a bit the magnitude (z axis) , otherwise the globe is centered on
+    // a point on top of the z axis (magnitude) and so the value is not appreciable.
     return {
         x: (Math.PI / 2) * 3 + ((Math.PI * lng) / 180) + target_offset,
         y: (((Math.PI / 2) * lat) / 90) - target_offset,
@@ -321,10 +366,18 @@ function updateCountryD3Graph(force = false) {
 
 }
 
-function centerLatLong(lat, lon) {
-    globe_center_x_y = translateLatLngToGlobeTarget(lat, lon);
-    globe.target.x = globe_center_x_y.x;
-    globe.target.y = globe_center_x_y.y;
+function centerGlobeToLocation(current_focused_location) {
+    if (window.data["locations"][current_focused_location]["x"] == null) {
+        // Cache the globe coordinates for the coordinates, no point in
+        // calculating this over and over
+        lat = window.data["locations"][current_focused_location]["lat"]
+        lng = window.data["locations"][current_focused_location]["lon"]
+        globe_center_x_y = translateLatLngToGlobeTarget(lat, lng);
+        window.data["locations"][current_focused_location]["x"] = globe_center_x_y.x;
+        window.data["locations"][current_focused_location]["y"] = globe_center_x_y.y;
+    }
+    globe.target.x = window.data["locations"][current_focused_location]["x"];
+    globe.target.y = window.data["locations"][current_focused_location]["y"];
 }
 
 function centerLatLongWithMax() {
@@ -365,8 +418,6 @@ function centerLatLongWithMax() {
     if (autofocus) {
         current_focused_location = dayStats[stats_config[current_stat_index]["type"]]["location_idx"]
     }
-    lat = window.data["locations"][current_focused_location]["lat"]
-    lon = window.data["locations"][current_focused_location]["lon"]
     location_name = window.data["locations"][current_focused_location]["location"]
     stat_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][current_focused_location]["values"][current_day_index])
     stat_legend = stats_config[current_stat_index]["legend"]
@@ -397,7 +448,7 @@ function centerLatLongWithMax() {
     formattedStatValue = d3.format(",")(stat_value)
     document.getElementById("focus-region").innerHTML = location_name + ' [' + formattedStatValue + '] ' + stat_legend
     updateCountryD3Graph();
-    centerLatLong(lat, lon);
+    centerGlobeToLocation(current_focused_location);
 }
 
 function datasetColor(value) {
@@ -489,6 +540,8 @@ function loadData(url) {
                 window.data = JSON.parse(xhr.responseText);
                 chartColumns = window.data["series_stats"].map(d => d.name);
                 document.body.style.backgroundImage = "none"; // remove loading
+                // Focus the last day statistics
+                current_day_index = window.data["series_stats"].length - 1;
                 updateDisplays();
             }
         }

@@ -20,6 +20,7 @@ day with icon `change_history`.
 
 
 ## TODO
+- The python created structs use "lon" instead of "lng" which is only going to lead to trouble. Rename.
 - Add screenshots
 - Dropdown with icons for selection with labels.
 - Download the data from the git repo instead of needing git pull
