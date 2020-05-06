@@ -175,11 +175,11 @@ def get_stats_for_day(gps_records, series_key):
                 if day_data["cumulative"] > res["top_cumulative"]["value"]:
                     res["top_cumulative"]["value"] = day_data["cumulative"]
                     res["top_cumulative"]["location_idx"] = location_number
-                if day_data["day"] > res["top_day"]["value"]:
-                    res["top_day"]["value"] = day_data["day"]
+                if abs(day_data["day"]) > res["top_day"]["value"]:
+                    res["top_day"]["value"] = abs(day_data["day"])
                     res["top_day"]["location_idx"] = location_number
-                if day_data["delta"] > res["top_delta"]["value"]:
-                    res["top_delta"]["value"] = day_data["delta"]
+                if abs(day_data["delta"]) > res["top_delta"]["value"]:
+                    res["top_delta"]["value"] = abs(day_data["delta"])
                     res["top_delta"]["location_idx"] = location_number
                 if day_data["delta"] < min_delta:
                     min_delta = day_data["delta"]
