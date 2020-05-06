@@ -14,7 +14,9 @@ if (!Detector.webgl) {
             "series_stats_key": "cumulative_global",
             "legend": "Cases",
             "icon": "present_to_all",
-            "min_value_fn": function () {return 0},
+            "min_value_fn": function () {
+                return Math.min(...window.data["locations"][current_focused_location]["values"].map(d => d[0]))
+            },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_cumulative"]["value"]},
             "data_fn": function (d) {return d[0]},
             "color_fn": function (d) {return datasetColor(d)}
@@ -24,7 +26,9 @@ if (!Detector.webgl) {
             "series_stats_key": "day_global",
             "legend": "Cases",
             "icon": "today",
-            "min_value_fn": function () {return 0},
+            "min_value_fn": function () {
+                return Math.min(...window.data["locations"][current_focused_location]["values"].map(d => d[1]))
+            },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_day"]["value"]},
             "data_fn": function (d) {return d[1]},
             "color_fn": function (d) {return datasetColor(d)}
@@ -43,13 +47,19 @@ if (!Detector.webgl) {
             "color_fn": function (d) {return datasetColor(d)}
         }
     ]
+    // Colors picked from https://materializecss.com/color.html
+    var color_scheme = {
+        'lime accent-3': 0xc6ff00,
+        'teal lighten-4': 0xb2dfdb,
+        'red darken-4': 0xb71c1c,
+        'orange darken-4': 0xe65100,
+    };
     var autofocus = true;
-    var colors = [0xc62828];
     var container = document.getElementById("globe-container");
 
     // D3 nhart Related variables
     var svg;
-    var chartMargin = ({top: 20, right: 20, bottom: 25, left: 60})
+    var chartMargin = ({top: 0, right: 20, bottom: 25, left: 30})
     var chartColumns = Array()
     var d3_data = Array()
 
@@ -100,7 +110,7 @@ function findClosestRegion(target_lat, target_lng, threshold = 5) {
     if (matchingLocations.length == 0) {
         return null
     }
-    closest_idx = matchingLocations.reduce((acc, val) => acc["rad_distance"] > val["rad_distance"]?val:acc);
+    closest_idx = matchingLocations.reduce((acc, val) => acc["rad_distance"] > val["rad_distance"] ? val : acc);
     console.log("Closest idx: ", closest_idx["idx"]);
     return closest_idx["idx"]
 }
@@ -119,6 +129,7 @@ function onMouseUp(_event) {
         current_focused_location = closest_region
         if (autofocus) {
             autofocus = false;
+            document.getElementById("autofocus").innerHTML = "center_focus_weak";
         }
         updateDisplays();
     }
@@ -325,7 +336,7 @@ function updateCountryD3Graph(force = false) {
 
         svg.append("g")
             .attr("fill", "none")
-            .attr("stroke", "#" + datasetColor().getHexString())
+            .attr("stroke", "#" + datasetColor(1).getHexString())
             .attr("stroke-chartWidth", 1.5)
             .attr("stroke-linejoin", "round")
             .attr("stroke-linecap", "round")
@@ -420,54 +431,78 @@ function centerLatLongWithMax() {
     }
     location_name = window.data["locations"][current_focused_location]["location"]
     stat_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][current_focused_location]["values"][current_day_index])
-    stat_legend = stats_config[current_stat_index]["legend"]
+    // Let's format the number to look like X,YYY
     stat_type = stats_config[current_stat_index]["type"]
+    formatted_stat_value = d3.format(",")(stat_value)
     if (stat_type == "top_delta") {
         if (stat_value > 0) {
             icon = 'trending_up'
             if (datasetType == "recovered") {
                 // More recovered = green
-                stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + stat_value;
+                stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + formatted_stat_value;
             } else {
-                stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + stat_value;
+                stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + formatted_stat_value;
             }
         } else if (stat_value == 0) {
             icon = 'trending_flat'
-            stat_value = '<i class="material-icons grey">' + icon + '</i> ' + stat_value;
+            stat_value = '<i class="material-icons grey">' + icon + '</i> ' + formatted_stat_value;
         } else {
             icon = 'trending_down'
             if (datasetType == "recovered") {
                 // Less recovered = red
-                stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + stat_value;
+                stat_value = '<i class="material-icons red accent-4">' + icon + '</i>' + formatted_stat_value;
             } else {
-                stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + stat_value;
+                stat_value = '<i class="material-icons light-green accent-3">' + icon + '</i> ' + formatted_stat_value;
             }
         }
     }
-    // Let's format the number to look like X,YYY
-    formattedStatValue = d3.format(",")(stat_value)
-    document.getElementById("focus-region").innerHTML = location_name + ' [' + formattedStatValue + '] ' + stat_legend
+    document.getElementById("focus-region").innerHTML = location_name + ' [' + formatted_stat_value + '] '
     updateCountryD3Graph();
     centerGlobeToLocation(current_focused_location);
 }
 
 function datasetColor(value) {
     stat_type = stats_config[current_stat_index]["type"]
+    // Let's set a default in case we just want to know the "default" color
     switch (datasetType) {
-        case "deaths": if (stat_type == "top_delta" && value < 1) {
-            // Less daily deaths = green
-            return new THREE.Color(0xc6ff00);
-        } else {
-            return new THREE.Color(0xb71c1c);
-        }
-        case "confirmed": if (stat_type == "top_delta" && value < 1) {
-            // Less daily confirmed = green
-            return new THREE.Color(0xc6ff00);
-        } else {
-            return new THREE.Color(0xe65100);
-        }
+        case "deaths":
+            if (stat_type == "top_delta" || stat_type == "top_day") {
+                if (value < 0) {
+                    // Less daily deaths
+                    return new THREE.Color(color_scheme["lime accent-3"]);
+                } else if (value == 0) {
+                    // Zero daily deaths
+                    return new THREE.Color(color_scheme["teal lighten-4"]);
+                } else {
+                    // Increase of deaths
+                    return new THREE.Color(color_scheme["red darken-4"]);
+                }
+            } else {
+                // Cumulative deaths
+                return new THREE.Color(color_scheme["red darken-4"]);
+            }
+        case "confirmed":
+            if (stat_type == "top_delta" || stat_type == "top_day") {
+                if (value < 0) {
+                    // Less daily confirmed
+                    return new THREE.Color(color_scheme["lime accent-3"]);
+                } else if (value == 0) {
+                    // Zero daily confirmed
+                    return new THREE.Color(color_scheme["teal lighten-4"]);
+                } else {
+                    // Daily increase of infection
+                    return new THREE.Color(color_scheme["orange darken-4"]);
+                }
+            } else {
+                if (value > 0) {
+                    return new THREE.Color(color_scheme["orange darken-4"]);
+                } else {
+                    // Zero or negative confirmed cummulative
+                    return null;
+                }
+            }
         // Default would hit recovered, if we have no daily increase of recovered I'm not sure we should paint the line red...
-        default: return new THREE.Color(0xc6ff00);
+        default: return new THREE.Color(color_scheme["lime accent-3"]);
     }
 }
 
@@ -486,14 +521,21 @@ function loadGlobeDataForDay() {
         dayStats = window.data["series_stats"][current_day_index];
         day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
         color = stats_config[current_stat_index]["color_fn"](day_value)
+        if (color == null) {
+            continue;
+        }
         magnitude = day_value / focus_stat_max_value;
-        if (magnitude > 1) {
-            console.log(focus_stat_max_value, dayStats, focus_stat_max_value, magnitude);
+        if (magnitude == 0) {
+            // Let's create a fake magnitude.
+            // The color_fn will show a different color so we can see 0 entries that day
+            // for a location
+            magnitude = 0.001; // Let's create a fake magnitude
         }
-        if (magnitude > 0) {
-            magnitude = magnitude * 200;
-            globe.addPoint(lat, lon, magnitude, color, subgeo);
+        if (magnitude < 0) {
+            magnitude *= -1;
         }
+        magnitude = magnitude * 200;
+        globe.addPoint(lat, lon, magnitude, color, subgeo);
     }
     globe.setBaseGeometry(subgeo)
 }
