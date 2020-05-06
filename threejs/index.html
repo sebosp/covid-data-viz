@@ -42,6 +42,13 @@
             border-width: 1px;
         }
 
+        @media only screen and (max-width: 767px) {
+            #focus-container {
+                width: 50%;
+                height: 50%;
+            }
+        }
+
         #focus-region {
             color: #fff;
             margin: auto;
@@ -119,7 +126,8 @@
             <div class="col s1 m1">
                 <ul class="pagination">
                     <li class="waves-effect">
-                        <a href="#!" id="decrementDay" onclick="incrementDayBy(-1)"><i class="material-icons">chevron_left</i></a>
+                        <a href="#!" id="decrementDay" onclick="incrementDayBy(-1)"><i
+                                class="material-icons">chevron_left</i></a>
                     </li>
             </div>
             <div class="col s1 m2">
@@ -128,7 +136,8 @@
             <div class="col s1 m1">
                 <ul class="pagination">
                     <li class="waves-effect">
-                        <a href="#!" id="incrementDay" onclick="incrementDayBy(1)"><i class="material-icons">chevron_right</i></a>
+                        <a href="#!" id="incrementDay" onclick="incrementDayBy(1)"><i
+                                class="material-icons">chevron_right</i></a>
                     </li>
                 </ul>
                 </ul>
@@ -156,7 +165,7 @@
     </header>
     <div id="globe-container"></div>
     <div class="row">
-    <div class="teal darken-4 col s4 m4 l4" id="focus-container">
+        <div class="teal darken-4 col s5 m4 l4" id="focus-container">
             <div id="focus-region">
             </div>
             <div id="region-graph">
