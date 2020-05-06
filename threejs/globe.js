@@ -142,35 +142,6 @@ DAT.Globe = function (container, colorFn) {
 
         point = new THREE.Mesh(geometry);
 
-
-        //SPACE
-
-
-        var urls = [imgDir + 'hearingaid.jpg', imgDir + 'hearingaid.jpg',
-        imgDir + 'hearingaid.jpg', imgDir + 'hearingaid.jpg',
-        imgDir + 'hearingaid.jpg', imgDir + 'hearingaid.jpg'];
-        var textureCube = THREE.ImageUtils.loadTextureCube(urls);
-        var shader = THREE.ShaderLib["cube"];
-        //var shader = THREE.ShaderUtils.lib["cube"];
-        var uniforms = THREE.UniformsUtils.clone(shader.uniforms);
-        uniforms['tCube'].texture = textureCube; // textureCube has been init before
-        var material = new THREE.ShaderMaterial({
-            fragmentShader: shader.fragmentShader,
-            vertexShader: shader.vertexShader,
-            uniforms: uniforms
-        }); // build the skybox Mesh
-        skyboxMesh = new THREE.Mesh(new THREE.CubeGeometry(10000, 10000, 10000, 1, 1, 1, null, true), material);
-        // add it to the scene
-
-        // scene.add( skyboxMesh ); 
-
-
-
-
-
-
-
-
         renderer = new THREE.WebGLRenderer({antialias: true});
         renderer.setSize(w, h);
 
