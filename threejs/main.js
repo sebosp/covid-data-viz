@@ -8,6 +8,29 @@ if (!Detector.webgl) {
     var current_stat_index = 0;
     var prev_stat_index = -1;
     var RADIAN = 180 / Math.PI;
+
+    function locationHasDataforDelta(location_idx) {
+        /* Checks if there's historic data before the current chosen day.
+         * If there is no data before it, then the visualization shouldn't
+         * be done for delta, i.e. if the current delta is 0, it might have
+         * been that there has never been data for this location and thus
+         * there is no use on draing it */
+
+        // Delta is a substraction between the current day to its previous day.
+        if (current_day_index == 0) {
+            // If this is the first day in the history, then there's no point in drawing 0 increase of deaths
+            return false;
+        }
+        // XXX: This is a bad idea, using a hardcoded array index, maybe change it to a map(){idx: x, is_cumulative: true} with filter
+        top_cumulative_idx = 0;
+        // Zero entries, let's see if the previous day had data:
+        if (stats_config[top_cumulative_idx]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index - 1]) > 0) {
+            return true;
+        }
+        // If we reach this point, the previous day has no cumulative records and so the delta is meaningless
+        return false;
+    }
+
     var stats_config = [
         {
             "type": "top_cumulative",
@@ -19,7 +42,31 @@ if (!Detector.webgl) {
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_cumulative"]["value"]},
             "data_fn": function (d) {return d[0]},
-            "color_fn": function (d) {return datasetColor(d)}
+            "color_fn": function (value, _location_idx) {
+                switch (datasetType) {
+                    case "deaths":
+                        if (value > 0) {
+                            return new THREE.Color(color_scheme["red darken-4"]);
+                        } else {
+                            return null;
+                        }
+                    case "confirmed":
+                        if (value > 0) {
+                            return new THREE.Color(color_scheme["orange darken-4"]);
+                        } else {
+                            // Zero or negative confirmed cummulative should not be drawn
+                            return null;
+                        }
+                    case "recovered":
+                        if (value > 0) {
+                            return new THREE.Color(color_scheme["lime accent-3"]);
+                        } else {
+                            // Zero or negative confirmed cummulative should not be drawn
+                            return null;
+                        }
+                    default: return null
+                }
+            },
         },
         {
             "type": "top_day",
@@ -31,7 +78,43 @@ if (!Detector.webgl) {
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_day"]["value"]},
             "data_fn": function (d) {return d[1]},
-            "color_fn": function (d) {return datasetColor(d)}
+            "color_fn": function (value, location_idx) {
+                switch (datasetType) {
+                    case "deaths":
+                        if (value < 0) {
+                            // Less daily deaths
+                            return new THREE.Color(color_scheme["lime accent-3"]);
+                        } else if (value == 0) {
+                            if (locationHasDataforDelta(location_idx)) {
+                                return new THREE.Color(color_scheme["teal lighten-4"]);
+                            }
+                            return null;
+                        } else {
+                            // Increase of deaths
+                            return new THREE.Color(color_scheme["red darken-4"]);
+                        }
+                    case "confirmed":
+                        if (value < 0) {
+                            // Less daily confirmed
+                            return new THREE.Color(color_scheme["lime accent-3"]);
+                        } else if (value == 0) {
+                            if (locationHasDataforDelta(location_idx)) {
+                                return new THREE.Color(color_scheme["teal lighten-4"]);
+                            }
+                            return null;
+                        } else {
+                            // Daily increase of infection
+                            return new THREE.Color(color_scheme["orange darken-4"]);
+                        }
+                    case "recovered":
+                        if (value > 0) {
+                            return new THREE.Color(color_scheme["lime accent-3"]);
+                        } else {
+                            return null;
+                        }
+                    default: return null
+                }
+            },
         },
         {
             "type": "top_delta",
@@ -44,7 +127,41 @@ if (!Detector.webgl) {
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_delta"]["value"]},
             "data_fn": function (d) {return d[2]},
-            "color_fn": function (d) {return datasetColor(d)}
+            "color_fn": function (value, location_idx) {
+                switch (datasetType) {
+                    case "deaths":
+                        if (value < 0) {
+                            // Less daily deaths
+                            return new THREE.Color(color_scheme["lime accent-3"]);
+                        } else if (value == 0) {
+                            // Zero daily deaths
+                            return new THREE.Color(color_scheme["teal lighten-4"]);
+                        } else {
+                            // Increase of deaths
+                            return new THREE.Color(color_scheme["red darken-4"]);
+                        }
+                    case "confirmed":
+                        if (value < 0) {
+                            // Less daily confirmed
+                            return new THREE.Color(color_scheme["lime accent-3"]);
+                        } else if (value == 0) {
+                            if (locationHasDataforDelta(location_idx)) {
+                                return new THREE.Color(color_scheme["teal lighten-4"]);
+                            }
+                            return null;
+                        } else {
+                            // Daily increase of infection
+                            return new THREE.Color(color_scheme["orange darken-4"]);
+                        }
+                    case "recovered":
+                        if (value > 0) {
+                            return new THREE.Color(color_scheme["lime accent-3"]);
+                        } else {
+                            return null;
+                        }
+                    default: return null
+                }
+            },
         }
     ]
     // Colors picked from https://materializecss.com/color.html
@@ -76,6 +193,10 @@ if (!Detector.webgl) {
         M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'), {autoTrigger: false});
     });
     var datasetType = "confirmed"
+    globe = new DAT.Globe(container, function () {});
+    addEventListeners();
+    animate();
+    TWEEN.start();
     changeDataSet();
 }
 
@@ -87,6 +208,12 @@ function findClosestRegion(target_lat, target_lng, threshold = 5) {
     console.log("findClosestRegion to lat: ", target_lat, "lng: ", target_lng);
     countrieInThreshold = Array();
     matchingLocations = window.data["locations"].map(function (_loc, idx) {
+        // The value might not be drawn, so let's skip over non-drawn regions
+        day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][idx]["values"][current_day_index])
+        color = stats_config[current_stat_index]["color_fn"](day_value, idx)
+        if (color == null) {
+            return {"idx": idx, "matches": false}
+        }
         lat_distance = Math.abs(target_lat - window.data["locations"][idx]["lat"])
         lng_distance = Math.abs(target_lng - window.data["locations"][idx]["lon"])
         if (lat_distance < threshold && lng_distance < threshold * 2) {
@@ -129,7 +256,7 @@ function onMouseUp(_event) {
         current_focused_location = closest_region
         if (autofocus) {
             autofocus = false;
-            document.getElementById("autofocus").innerHTML = "center_focus_weak";
+            updateAutoFocusIcon();
         }
         updateDisplays();
     }
@@ -212,9 +339,13 @@ function addEventListeners() {
     }, false);
 }
 
+function updateAutoFocusIcon() {
+    document.getElementById("autofocus").innerHTML = autofocus ? "center_focus_strong" : "center_focus_weak";
+}
+
 function toggleAutoFocus() {
     autofocus = !autofocus;
-    document.getElementById("autofocus").innerHTML = autofocus ? "center_focus_strong" : "center_focus_weak";
+    updateAutoFocusIcon();
     if (autofocus) {
         updateDisplays()
     }
@@ -252,10 +383,10 @@ function translateGlobeTargetToLatLng(target_offset = 0.0) {
     // The offset allows to appreciate a bit the magnitude (z axis) , otherwise the globe is centered on
     // a point on top of the z axis (magnitude) and so the value is not appreciable.
     lng = ((globe.target.x - target_offset - ((Math.PI / 2) * 3)) * 180) / Math.PI;
-    while(lng < 180){
+    while (lng < 180) {
         lng += 360;
     }
-    while(lng > 180){
+    while (lng > 180) {
         lng -= 360;
     }
     return {
@@ -343,7 +474,7 @@ function updateCountryD3Graph(force = false) {
 
         svg.append("g")
             .attr("fill", "none")
-            .attr("stroke", "#" + datasetColor(1).getHexString())
+            .attr("stroke", "#" + stats_config[current_stat_index]["color_fn"](1, current_focused_location).getHexString())
             .attr("stroke-chartWidth", 1.5)
             .attr("stroke-linejoin", "round")
             .attr("stroke-linecap", "round")
@@ -398,7 +529,7 @@ function centerGlobeToLocation(current_focused_location) {
     globe.target.y = window.data["locations"][current_focused_location]["y"];
 }
 
-function centerLatLongWithMax() {
+function centerGlobeToFocusedLocation() {
     // {"locations": [{
     //     "lat": 10,
     //     "lon": 4.9,
@@ -468,51 +599,6 @@ function centerLatLongWithMax() {
     centerGlobeToLocation(current_focused_location);
 }
 
-function datasetColor(value) {
-    stat_type = stats_config[current_stat_index]["type"]
-    // Let's set a default in case we just want to know the "default" color
-    switch (datasetType) {
-        case "deaths":
-            if (stat_type == "top_delta" || stat_type == "top_day") {
-                if (value < 0) {
-                    // Less daily deaths
-                    return new THREE.Color(color_scheme["lime accent-3"]);
-                } else if (value == 0) {
-                    // Zero daily deaths
-                    return new THREE.Color(color_scheme["teal lighten-4"]);
-                } else {
-                    // Increase of deaths
-                    return new THREE.Color(color_scheme["red darken-4"]);
-                }
-            } else {
-                // Cumulative deaths
-                return new THREE.Color(color_scheme["red darken-4"]);
-            }
-        case "confirmed":
-            if (stat_type == "top_delta" || stat_type == "top_day") {
-                if (value < 0) {
-                    // Less daily confirmed
-                    return new THREE.Color(color_scheme["lime accent-3"]);
-                } else if (value == 0) {
-                    // Zero daily confirmed
-                    return new THREE.Color(color_scheme["teal lighten-4"]);
-                } else {
-                    // Daily increase of infection
-                    return new THREE.Color(color_scheme["orange darken-4"]);
-                }
-            } else {
-                if (value > 0) {
-                    return new THREE.Color(color_scheme["orange darken-4"]);
-                } else {
-                    // Zero or negative confirmed cummulative
-                    return null;
-                }
-            }
-        // Default would hit recovered, if we have no daily increase of recovered I'm not sure we should paint the line red...
-        default: return new THREE.Color(color_scheme["lime accent-3"]);
-    }
-}
-
 function loadGlobeDataForDay() {
     console.log("loadGlobeDataForDay" + current_day_index);
     var subgeo = new THREE.Geometry();
@@ -527,14 +613,14 @@ function loadGlobeDataForDay() {
         lon = window.data["locations"][location_idx]["lon"];
         dayStats = window.data["series_stats"][current_day_index];
         day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
-        color = stats_config[current_stat_index]["color_fn"](day_value)
+        color = stats_config[current_stat_index]["color_fn"](day_value, location_idx)
         if (color == null) {
             continue;
         }
         magnitude = day_value / focus_stat_max_value;
         if (magnitude == 0) {
             // Let's create a fake magnitude.
-            // The color_fn will show a different color so we can see 0 entries that day
+            // The color_fn will show a different color so we can see no increase that day
             // for a location
             magnitude = 0.001; // Let's create a fake magnitude
         }
@@ -565,7 +651,7 @@ function updateDisplays(day_index) {
         globe.resetData();
         loadGlobeDataForDay()
         globe.createPoints();
-        centerLatLongWithMax();
+        centerGlobeToFocusedLocation();
     }
 }
 
@@ -573,14 +659,10 @@ function animate() {
     requestAnimationFrame(animate);
     globe.render();
 }
+
 function loadData(url) {
     document.body.style.backgroundImage = "url('images/loading.gif')";
-    clearData();
     var xhr;
-    globe = new DAT.Globe(container, datasetColor);
-    addEventListeners();
-    animate();
-    TWEEN.start();
     xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
     xhr.onreadystatechange = function (_e) {
@@ -591,6 +673,8 @@ function loadData(url) {
                 document.body.style.backgroundImage = "none"; // remove loading
                 // Focus the last day statistics
                 current_day_index = window.data["series_stats"].length - 1;
+                autofocus = true;
+                updateAutoFocusIcon();
                 updateDisplays();
             }
         }
