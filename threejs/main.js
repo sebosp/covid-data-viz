@@ -251,9 +251,16 @@ function incrementDayBy(offset) {
 function translateGlobeTargetToLatLng(target_offset = 0.0) {
     // The offset allows to appreciate a bit the magnitude (z axis) , otherwise the globe is centered on
     // a point on top of the z axis (magnitude) and so the value is not appreciable.
+    lng = ((globe.target.x - target_offset - ((Math.PI / 2) * 3)) * 180) / Math.PI;
+    while(lng < 180){
+        lng += 360;
+    }
+    while(lng > 180){
+        lng -= 360;
+    }
     return {
         lat: ((globe.target.y + target_offset) * 90) / (Math.PI / 2),
-        lng: ((globe.target.x - target_offset - ((Math.PI / 2) * 3)) * 180) / Math.PI,
+        lng: lng,
     }
 }
 
