@@ -8,6 +8,7 @@ if (!Detector.webgl) {
     var current_stat_index = 0;
     var prev_stat_index = -1;
     var RADIAN = 180 / Math.PI;
+    var TAU = Math.PI * 2;
 
     function locationHasDataforDelta(location_idx) {
         /* Checks if there's historic data before the current chosen day.
@@ -525,7 +526,8 @@ function centerGlobeToLocation(current_focused_location) {
         window.data["locations"][current_focused_location]["x"] = globe_center_x_y.x;
         window.data["locations"][current_focused_location]["y"] = globe_center_x_y.y;
     }
-    globe.target.x = window.data["locations"][current_focused_location]["x"];
+    current_globe_rotations = Math.floor(globe.target.x / TAU)
+    globe.target.x = window.data["locations"][current_focused_location]["x"]  + (current_globe_rotations * TAU);
     globe.target.y = window.data["locations"][current_focused_location]["y"];
 }
 

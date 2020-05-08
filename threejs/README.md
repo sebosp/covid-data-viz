@@ -20,7 +20,6 @@ day with icon `change_history`.
 
 
 ## TODO
-- The graphs for delay can also contain negative values and so the graph should include the x axis at 0 marker.
 - The python created structs use "lon" instead of "lng" which is only going to lead to trouble. Rename.
 - Add screenshots
 - Dropdown with icons for selection with labels.
@@ -30,7 +29,8 @@ day with icon `change_history`.
 - Doesn't work on iPhone
 
 ## In Progress
-- The globe constantly rotates, so the received latitude could be more than 180 degrees or less than 180 degrees
+- The graphs for delay can also contain negative values and so the graph should include the x axis at 0 marker.
 
 ## Done
+- The globe constantly rotates, so the received latitude could be more than 180 degrees or less than 180 degrees
 - The data for Lithuania contains a drop in cumulative_global, this means that when drawing daily, we will have to use a minimum by default 0 but should find if something is below it
