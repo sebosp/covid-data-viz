@@ -19,12 +19,12 @@ from pprint import pprint
 
 def parse_header(header_array, USFileType=False, offset_dates=None):
     """
-    The header line is composed of: Province/State,Country/Region,Lat,Long,Day1,Day2,Day3
+    The header line is composed of: Province/State,Country/Region,Lat,Lng,Day1,Day2,Day3
     :param header_array list: The header line split already by commas
     :param USFileType bool: Wether we should include only US or exclude US
     :param offset_dates int: override the default calculation of offset_dates
     """
-    # Province/State, Country/Region, Lat, Long
+    # Province/State, Country/Region, Lat, Lng
     logger = logging.getLogger("parse_header")
     date_keys = []
     if offset_dates is None:
@@ -47,13 +47,13 @@ def parse_header(header_array, USFileType=False, offset_dates=None):
 
 def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, forceProcessUS=False):
     """
-    The data line is composed of: SomeProvince/SomeState,SomeCountry/SomeRegion,Lat0,Long0,Day1Value,Day2Value,Day3Value
+    The data line is composed of: SomeProvince/SomeState,SomeCountry/SomeRegion,Lat0,Lng0,Day1Value,Day2Value,Day3Value
     :param data_array list: A line split already by commas
     :param date_keys list: A list of dates to fill from the data array
     :param USFileType bool: Mark the records as being from either US filetype or not
     :param offset_dates int: override the default calculation of offset_dates
     :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
-    :returns tuple: ("Lat,Long,Country - Region,True,True", [{"Year-Mothh-Day":{"cumulative": CumulativeValue, "day": DayTotal, "delta": Delta}},{}])
+    :returns tuple: ("Lat,Lng,Country - Region,True,True", [{"Year-Mothh-Day":{"cumulative": CumulativeValue, "day": DayTotal, "delta": Delta}},{}])
     """
     res = dict()
     logger = logging.getLogger("parse_data_line")
@@ -63,7 +63,7 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
         if data_array[5]:
             country_region = "{} - {}".format(country_region, data_array[5])
         lat = data_array[8]
-        lon = data_array[9]
+        lng = data_array[9]
         if offset_dates is None:
             offset_dates = 11
     else:
@@ -72,11 +72,11 @@ def parse_data_line(data_array, date_keys, USFileType=False, offset_dates=None, 
             country_region = "{} - {}".format(country_region,
                                               data_array[0].replace(",", ""))
         lat = data_array[2]
-        lon = data_array[3]
+        lng = data_array[3]
         if offset_dates is None:
             offset_dates = 4
     gps_key = "{},{},{},{},{}".format(
-        lat, lon, country_region, USFileType, forceProcessUS)
+        lat, lng, country_region, USFileType, forceProcessUS)
     prev_cumulative = None
     prev_day_value = None
     for date_idx, date_item in enumerate(data_array[offset_dates:]):
@@ -109,7 +109,7 @@ def parse_csv_file(fname, USFileType=False, offset_dates=None, forceProcessUS=Fa
     :param USFileType bool: Mark the records as being from either US filetype or not
     :param offset_dates int: override the default calculation of offset_dates
     :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
-    :returns tuple like (["date1","date2"]{"lat,long,Country - Province,False,False":[{"2020-02-01":{"cumulative": 100, "day": 2, "delta": -5}}])
+    :returns tuple like (["date1","date2"]{"lat,lng,Country - Province,False,False":[{"2020-02-01":{"cumulative": 100, "day": 2, "delta": -5}}])
     """
     logger = logging.getLogger("parse_csv_file")
     logger.info("Starting to parse file %s", fname)
@@ -160,10 +160,10 @@ def get_stats_for_day(gps_records, series_key):
     day_global = 0
     delta_global = 0
     location_number = 0
-    for lat_lon_key, lat_lon_data in gps_records.items():
-        _lat, _lon, location, USFileType, forceProcessUS = lat_lon_key.split(
+    for lat_lng_key, lat_lng_data in gps_records.items():
+        _lat, _lng, location, USFileType, forceProcessUS = lat_lng_key.split(
             ",")
-        for day_key, day_data in lat_lon_data.items():
+        for day_key, day_data in lat_lng_data.items():
             if day_key == series_key:
                 if USFileType == "False" and location == "US" and forceProcessUS == "False":
                     logging.debug("Ignoring stat for day: %s location: %s, USFileType: %s, forceProcessUS: %s",
@@ -205,17 +205,17 @@ def generate_globe_json_string(gps_records, daily_series, pretty_print=False):
     locations = []
     series_stats = []
     # Let's push the locations and their daily values
-    for lat_lon_key, lat_lon_data in gps_records.items():
-        lat, lon, location, USFileType, forceProcessUS = lat_lon_key.split(",")
+    for lat_lng_key, lat_lng_data in gps_records.items():
+        lat, lng, location, USFileType, forceProcessUS = lat_lng_key.split(",")
         try:
             lat = float(lat)
-            lon = float(lon)
+            lng = float(lng)
         except:
-            logger.error("Unable to parse lat/lon on key %s", lat_lon_key)
+            logger.error("Unable to parse lat/lng on key %s", lat_lng_key)
             continue
         day_array = []
-        for day_key in sorted(lat_lon_data.keys()):
-            day_data = lat_lon_data[day_key]
+        for day_key in sorted(lat_lng_data.keys()):
+            day_data = lat_lng_data[day_key]
             if USFileType == "False" and location == "US" and forceProcessUS == "False":
                 # The data for US in this filetype is aggregated, let's not draw it twice
                 # we will send a "hide" flag
@@ -234,7 +234,7 @@ def generate_globe_json_string(gps_records, daily_series, pretty_print=False):
                 ])
         location_struct = dict()
         location_struct["lat"] = lat
-        location_struct["lon"] = lon
+        location_struct["lng"] = lng
         location_struct["location"] = location
         location_struct["values"] = day_array
         locations.append(location_struct)
@@ -255,7 +255,7 @@ def generate_globe_json_string(gps_records, daily_series, pretty_print=False):
 
 def merge_gps_records(lhs, rhs):
     """
-    Merges two sets of records of type: {"Lat,Lon":{"2020-01-02":"0.5"}}
+    Merges two dictionaries
     :returns a new dict with the merged keys
     """
     return {**lhs, **rhs}
@@ -266,8 +266,8 @@ def print_current_info_div(gps_records, daily_series):
     Iterates over the parsed dates and records to find the unique series and print <spans> to populate the dropdown
     """
     js_day_array = []
-    for _, lat_lon_data in gps_records.items():
-        for day_idx, _ in lat_lon_data.items():
+    for _, lat_lng_data in gps_records.items():
+        for day_idx, _ in lat_lng_data.items():
             daily_series.append(day_idx)
     # Let's make the series unique
     daily_series = set(daily_series)

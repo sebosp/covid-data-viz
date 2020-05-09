@@ -39,7 +39,7 @@ if (!Detector.webgl) {
             "legend": "Cases",
             "icon": "present_to_all",
             "min_value_fn": function () {
-                return Math.min(...window.data["locations"][current_focused_location]["values"].map(d => d[0]))
+                return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[0]))
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_cumulative"]["value"]},
             "data_fn": function (d) {return d[0]},
@@ -75,7 +75,7 @@ if (!Detector.webgl) {
             "legend": "Cases",
             "icon": "today",
             "min_value_fn": function () {
-                return Math.min(...window.data["locations"][current_focused_location]["values"].map(d => d[1]))
+                return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[1]))
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_day"]["value"]},
             "data_fn": function (d) {return d[1]},
@@ -124,7 +124,7 @@ if (!Detector.webgl) {
             "icon": "change_history",
             // The trend can be negative, so we need to find the minimum value
             "min_value_fn": function () {
-                return Math.min(...window.data["locations"][current_focused_location]["values"].map(d => d[2]))
+                return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[2]))
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_delta"]["value"]},
             "data_fn": function (d) {return d[2]},
@@ -216,13 +216,13 @@ function findClosestRegion(target_lat, target_lng, threshold = 5) {
             return {"idx": idx, "matches": false}
         }
         lat_distance = Math.abs(target_lat - window.data["locations"][idx]["lat"])
-        lng_distance = Math.abs(target_lng - window.data["locations"][idx]["lon"])
+        lng_distance = Math.abs(target_lng - window.data["locations"][idx]["lng"])
         if (lat_distance < threshold && lng_distance < threshold * 2) {
             // Here, let's imagine there is no curvature/height, because otherwise we need a real solution for lat/lng distance.
             target_idx_lat_rad = target_lat / RADIAN
             target_idx_lng_rad = target_lng / RADIAN
             current_idx_lat_rad = window.data["locations"][idx]["lat"] / RADIAN
-            current_idx_lng_rad = window.data["locations"][idx]["lon"] / RADIAN
+            current_idx_lng_rad = window.data["locations"][idx]["lng"] / RADIAN
             delta_lat_rad = current_idx_lat_rad - target_idx_lat_rad
             delta_lng_rad = current_idx_lng_rad - target_idx_lng_rad
             // Haversine:
@@ -401,7 +401,7 @@ function translateLatLngToGlobeTarget(lat, lng, target_offset = 0.0) {
     // The offset allows to appreciate a bit the magnitude (z axis) , otherwise the globe is centered on
     // a point on top of the z axis (magnitude) and so the value is not appreciable.
     return {
-        x: (Math.PI / 2) * 3 + ((Math.PI * lng) / 180) + target_offset,
+        x: ((Math.PI / 2) * 3 + ((Math.PI * lng) / 180) + target_offset) % TAU,
         y: (((Math.PI / 2) * lat) / 90) - target_offset,
     }
 }
@@ -428,12 +428,13 @@ function updateCountryD3Graph(force = false) {
         var chartWidth = window.innerWidth * 0.25;
         // Reduce the size of the chart by 4%, give some space for the title
         var chartHeight = window.innerHeight * 0.28;
+        yMinValue = stats_config[current_stat_index]["min_value_fn"]()
         xScale = d3.scaleUtc()
             .domain(d3.extent(d3_data.dates))
             .range([chartMargin.left, chartWidth - chartMargin.right])
         yScale = d3.scaleLinear()
             .domain([
-                stats_config[current_stat_index]["min_value_fn"](),
+                yMinValue,
                 d3.max(d3_data.series, d => d3.max(d.values)) // Maybe use max_value_fn
             ]).nice()
             .range([chartHeight - chartMargin.bottom, chartMargin.top])
@@ -458,10 +459,6 @@ function updateCountryD3Graph(force = false) {
             // Container class to make it responsive.
             .classed("svg-container", true)
             .append("svg")
-            // Responsive SVG needs these 2 attributes and no width and height attr.
-            //.attr("viewBox", "0 0 600 400")
-            // Class to make it responsive.
-            .classed("svg-content-responsive", true)
             // Fill with a rectangle for visualization.
             .attr("viewBox", [0, 0, chartWidth, chartHeight])
             .attr("preserveAspectRatio", "xMinYMin meet")
@@ -485,7 +482,8 @@ function updateCountryD3Graph(force = false) {
             .style("mix-blend-mode", "multiply")
             .attr("d", d => line(d.values));
 
-        if (stat_type == "top_delta") {
+        if (yMinValue < 0) {
+            // The data may contain values below 0
             svg.append("line")
                 .style("stroke", "white")
                 .style("stroke-dasharray", "2px")
@@ -521,20 +519,21 @@ function centerGlobeToLocation(current_focused_location) {
         // Cache the globe coordinates for the coordinates, no point in
         // calculating this over and over
         lat = window.data["locations"][current_focused_location]["lat"]
-        lng = window.data["locations"][current_focused_location]["lon"]
+        lng = window.data["locations"][current_focused_location]["lng"]
         globe_center_x_y = translateLatLngToGlobeTarget(lat, lng);
         window.data["locations"][current_focused_location]["x"] = globe_center_x_y.x;
         window.data["locations"][current_focused_location]["y"] = globe_center_x_y.y;
     }
-    current_globe_rotations = Math.floor(globe.target.x / TAU)
-    globe.target.x = window.data["locations"][current_focused_location]["x"]  + (current_globe_rotations * TAU);
+    console.log("Previous rotation: ", globe.target.x);
+    globe.target.x = Math.floor(globe.target.x / TAU) * TAU + window.data["locations"][current_focused_location]["x"];
+    console.log("New rotation: ", globe.target.x);
     globe.target.y = window.data["locations"][current_focused_location]["y"];
 }
 
 function centerGlobeToFocusedLocation() {
     // {"locations": [{
     //     "lat": 10,
-    //     "lon": 4.9,
+    //     "lng": 4.9,
     //     "location": "China - Hubei",
     //     "values": [
     //         [ 0,  0,  0], <cumulative>, <day_increment>, <day_increment_delta>
@@ -612,7 +611,7 @@ function loadGlobeDataForDay() {
             continue;
         }
         lat = window.data["locations"][location_idx]["lat"];
-        lon = window.data["locations"][location_idx]["lon"];
+        lng = window.data["locations"][location_idx]["lng"];
         dayStats = window.data["series_stats"][current_day_index];
         day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
         color = stats_config[current_stat_index]["color_fn"](day_value, location_idx)
@@ -630,7 +629,7 @@ function loadGlobeDataForDay() {
             magnitude *= -1;
         }
         magnitude = magnitude * 200;
-        globe.addPoint(lat, lon, magnitude, color, subgeo);
+        globe.addPoint(lat, lng, magnitude, color, subgeo);
     }
     globe.setBaseGeometry(subgeo)
 }
