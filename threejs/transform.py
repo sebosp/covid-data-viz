@@ -149,13 +149,11 @@ def get_stats_for_day(gps_records, series_key):
     res["top_day"] = dict()
     res["top_day"]["value"] = 0
     res["top_day"]["location_idx"] = 0
-    res["delta"] = dict()
     res["top_delta"] = dict()
     res["top_delta"]["value"] = 0
     res["top_delta"]["location_idx"] = 0
     # For the most part, the stats have minimum value of 0, except for delta, which can be negative
     # So let's find the minimum value
-    min_delta = 999999999 # Stupid way to use something like u64::MAX :(
     cumulative_global = 0
     day_global = 0
     delta_global = 0
@@ -181,13 +179,10 @@ def get_stats_for_day(gps_records, series_key):
                 if abs(day_data["delta"]) > res["top_delta"]["value"]:
                     res["top_delta"]["value"] = abs(day_data["delta"])
                     res["top_delta"]["location_idx"] = location_number
-                if day_data["delta"] < min_delta:
-                    min_delta = day_data["delta"]
         location_number += 1
     res["cumulative_global"] = cumulative_global
     res["day_global"] = day_global
     res["delta_global"] = delta_global
-    res["min_delta"] = min_delta
     return res
 
 
@@ -259,26 +254,6 @@ def merge_gps_records(lhs, rhs):
     :returns a new dict with the merged keys
     """
     return {**lhs, **rhs}
-
-
-def print_current_info_div(gps_records, daily_series):
-    """
-    Iterates over the parsed dates and records to find the unique series and print <spans> to populate the dropdown
-    """
-    js_day_array = []
-    for _, lat_lng_data in gps_records.items():
-        for day_idx, _ in lat_lng_data.items():
-            daily_series.append(day_idx)
-    # Let's make the series unique
-    daily_series = set(daily_series)
-    for series in sorted(daily_series):
-        span_id = series
-        date_components = series.split("-")
-        span_value = "{}/{}/{}".format(
-            date_components[1], date_components[2], date_components[0])
-        print("    <span id=\"{}\" class=\"day\">{}</span>".format(span_id, span_value))
-        js_day_array.append("'{}'".format(series))
-    print("var days = [{}];".format(",".join(js_day_array)))
 
 
 def process_confirmed():
