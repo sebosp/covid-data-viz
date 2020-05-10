@@ -28,7 +28,7 @@ day with icon `change_history`.
 - Doesn't work on iPhone
 
 ## In Progress
-- Include population density
+- Include population per country
 
 ## Done
 - The data for Lithuania contains a drop in cumulative_global, this means that when drawing daily, we will have to use a minimum by default 0 but should find if something is below it
