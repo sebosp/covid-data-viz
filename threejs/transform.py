@@ -2,8 +2,7 @@
 """
 This file transforms 
 https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv
-into the expected format for the webgl map:
-https://github.com/dataarts/webgl-globe#data-format
+into a format that contains, for each location, a cumulative, daily and daily delta fields
 
 TODO:
     - If the date keys from several files do not match and they are joined, the data doesn't make sense.
@@ -14,6 +13,9 @@ import logging
 import calendar
 import json
 import csv
+import requests
+from bs4 import BeautifulSoup
+import pandas
 from pprint import pprint
 
 
