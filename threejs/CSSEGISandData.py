@@ -6,6 +6,7 @@ and derive cummulative and daily delta values
 import logging
 import csv
 import json
+import requests
 
 
 class CSSEGISandData:
@@ -18,17 +19,31 @@ class CSSEGISandData:
         """
         Sets up initial variables on the source of the data
         """
-        base_url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/"
-        self.confirmed_url = "{}/{}".format(base_url,
-                                            "time_series_covid19_confirmed_global.csv")
-        self.confirmed_deaths = "{}/{}".format(
+        self.logger = logging
+        raw_https_repo = "raw.githubusercontent.com/CSSEGISandData/COVID-19"
+        base_url = "https://{}/{}".format(
+            raw_https_repo,
+            "master/csse_covid_19_data/csse_covid_19_time_series/")
+        self.confirmed_url = "{}/{}".format(
+            base_url, "time_series_covid19_confirmed_global.csv")
+        self.deaths_url = "{}/{}".format(
             base_url, "time_series_covid19_deaths_global.csv")
-        self.recovered = "{}/{}".format(base_url,
-                                        "time_series_covid19_recovered_global.csv")
+        self.recovered_url = "{}/{}".format(
+            base_url, "time_series_covid19_recovered_global.csv")
+
+    def load_default_datasources(self):
+        """
+        Performs http requests to load the data from the configured URLs.
+        The data is loaded into strings which can later be parsed
+        """
+        confirmed_req = requests.get(self.confirmed_url)
+        deaths_req = requests.get(self.deaths_url)
+        recovered_req = requests.get(self.recovered_url)
 
     def parse_header(self, header_array, USFileType=False, offset_dates=None):
         """
-        The header line is composed of: Province/State,Country/Region,Lat,Lng,Day1,Day2,Day3
+        The header line is composed of:
+        Province/State,Country/Region,Lat,Lng,Day1,Day2,Day3
         :param header_array list: The header line split already by commas
         :param USFileType bool: Wether we should include only US or exclude US
         :param offset_dates int: override the default calculation of offset_dates
