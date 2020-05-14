@@ -23,6 +23,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("main transform")
     csse_handler = CSSEGISandData(logger)
+    csse_handler.load_default_datasources()
     csse_handler.process_confirmed()
     csse_handler.process_deaths()
     csse_handler.process_recovered()
