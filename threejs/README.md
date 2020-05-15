@@ -22,7 +22,6 @@ day with icon `change_history`.
 ## TODO
 - Add screenshots
 - Dropdown with icons for selection with labels.
-- Download the data from the git repo instead of needing git pull
 - When clicking on the dropdowns, down/up arrow activates it, which collides with the zoom of the globe
 - Add a country dropdown to jump manually and see stats
 - Doesn't work on iPhone
@@ -31,6 +30,7 @@ day with icon `change_history`.
 - Include population per country
 
 ## Done
+- Download the data from the git repo instead of needing git pull
 - The data for Lithuania contains a drop in cumulative_global, this means that when drawing daily, we will have to use a minimum by default 0 but should find if something is below it
 - The graphs for delay can also contain negative values and so the graph should include the x axis at 0 marker.
 - The python created structs use "lon" instead of "lng" which is only going to lead to trouble. Rename.
