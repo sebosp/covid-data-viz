@@ -10,12 +10,6 @@ TODO:
 """
 
 import logging
-import json
-import csv
-import requests
-from bs4 import BeautifulSoup
-import pandas
-from pprint import pprint
 from CSSEGISandData import CSSEGISandData
 
 
