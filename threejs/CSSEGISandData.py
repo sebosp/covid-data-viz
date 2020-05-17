@@ -9,6 +9,8 @@ import json
 import requests
 from io import StringIO
 
+# TODO: The file only uses time_series data sources, maybe we should make it
+# explicit in the functions, for later we may support more data source types
 
 class CSSEGISandData:
     """
@@ -69,9 +71,12 @@ class CSSEGISandData:
         """
         The header line is composed of:
         Province/State,Country/Region,Lat,Lng,Day1,Day2,Day3
+        This function can be called multiple times, but only once the dates are calculated
+        This is to avoid having several files with different time ranges, which is not supported.
         :param header_array list: The header line split already by commas
         :param USFileType bool: Wether we should include only US or exclude US
-        :param offset_dates int: override the default calculation of offset_dates
+        :param offset_dates int: Index in the header_array where the dates start
+               (i.e. "Day1" in the example above, would mean offset_dates: 4)
         """
         if self.date_keys:
             self.logger.info(
@@ -101,7 +106,8 @@ class CSSEGISandData:
         The data line is composed of: SomeProvince/SomeState,SomeCountry/SomeRegion,Lat0,Lng0,Day1Value,Day2Value,Day3Value
         :param data_array list: A line split already by commas
         :param USFileType bool: Mark the records as being from either US filetype or not
-        :param offset_dates int: override the default calculation of offset_dates
+        :param offset_dates int: Index in the header_array where the dates start
+               (i.e. "Day1" in the example above, would mean offset_dates: 4)
         :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
         :returns tuple: ("Lat,Lng,Country - Region,True,True", [{"Year-Mothh-Day":{"cumulative": CumulativeValue, "day": DayTotal, "delta": Delta}},{}])
         """
@@ -156,7 +162,8 @@ class CSSEGISandData:
         """
         :param file_contents str: The contents of the files downloaded from github
         :param USFileType bool: Mark the records as being from either US filetype or not
-        :param offset_dates int: override the default calculation of offset_dates
+        :param offset_dates int: Index in the header_array where the dates start
+               (i.e. "Day1" in the example above, would mean offset_dates: 4)
         :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
         :returns tuple like (["date1","date2"]{"lat,lng,Country - Province,False,False":[{"2020-02-01":{"cumulative": 100, "day": 2, "delta": -5}}])
         """
@@ -322,6 +329,9 @@ class CSSEGISandData:
         """
         global_deaths_gps_data = self.parse_csv_file_contents(
             self.global_deaths_dataset, USFileType=False)
+        # The header of the US file has the dates start at offset 12
+        # perhaps we should validate this never changes, or the data will
+        # be out of sync
         us_deaths_gps_data = self.parse_csv_file_contents(
             self.us_deaths_dataset, USFileType=True, offset_dates=12)
         deaths_gps_data = self.merge_gps_records(
