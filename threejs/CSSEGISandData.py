@@ -8,6 +8,7 @@ import csv
 import json
 import requests
 from io import StringIO
+from world_population import WorldOMeters
 
 # TODO: The file only uses time_series data sources, maybe we should make it
 # explicit in the functions, for later we may support more data source types
@@ -38,6 +39,7 @@ class CSSEGISandData:
         self.global_recovered_url = "{}/{}".format(
             base_url, "time_series_covid19_recovered_global.csv")
         self.date_keys = []
+        self.global_population_dataset = dict()
 
     def load_default_datasources(self):
         """
@@ -358,3 +360,11 @@ class CSSEGISandData:
             file_handle.write(self.generate_globe_json_string(
                 recovered_gps_data))
         logging.info("Finished writing data/recovered.json")
+
+    def load_world_population(self):
+        """
+        Loads the WorldOMeters data
+        """
+        world_pop_handler = WorldOMeters(self.logger)
+        world_pop_handler.load_default_datasources()
+        self.global_population_dataset = world_pop_handler.global_population_dataset
