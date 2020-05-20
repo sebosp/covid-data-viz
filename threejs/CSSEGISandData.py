@@ -13,6 +13,7 @@ from world_population import WorldOMeters
 # TODO: The file only uses time_series data sources, maybe we should make it
 # explicit in the functions, for later we may support more data source types
 
+
 class CSSEGISandData:
     """
     Handles the data from https://github.com/CSSEGISandData/COVID-19
@@ -23,7 +24,7 @@ class CSSEGISandData:
         """
         Sets up initial variables on the source of the data
         """
-        self.logger = logger
+        self.logger = logging.getLogger("CSSEGISandData")
         raw_https_repo = "raw.githubusercontent.com/CSSEGISandData/COVID-19"
         base_url = "https://{}/{}".format(
             raw_https_repo,
@@ -67,6 +68,7 @@ class CSSEGISandData:
         self.global_recovered_dataset = global_recovered_req.content
         self.us_confirmed_dataset = us_confirmed_req.content
         self.us_deaths_dataset = us_deaths_req.content
+        self.load_world_population()
         self.logger.info("DONE load_default_datasources")
 
     def parse_header(self, header_array, USFileType=False, offset_dates=None):
@@ -169,7 +171,7 @@ class CSSEGISandData:
         :param forceProcessUS bool: Mark the records as needing to be forcefully processed or not
         :returns tuple like (["date1","date2"]{"lat,lng,Country - Province,False,False":[{"2020-02-01":{"cumulative": 100, "day": 2, "delta": -5}}])
         """
-        self.logger.info("Starting to parse contents")
+        self.logger.info("INIT parse csv file contents")
         res = dict()
         # Convert the incoming string into a file object
         csv_file_obj = StringIO(content.decode())
@@ -187,7 +189,7 @@ class CSSEGISandData:
                     offset_dates=offset_dates,
                     forceProcessUS=forceProcessUS)
                 res[gps_key] = gps_daily_data
-        self.logger.info("Finished parsing file")
+        self.logger.info("DONE parse csv file contents")
         return res
 
     def get_stats_for_day(self, gps_records, series_key):
@@ -248,7 +250,7 @@ class CSSEGISandData:
         :param pretty_print bool: human readable json structures
         Data format: see data/-data-schema.json
         """
-        self.logger.info("Starting creating array structs for the JSON")
+        self.logger.info("INIT creating array structs for the JSON")
         # First, let's scan day indexes, they will become series and be in the dropdown:
         locations = []
         series_stats = []
@@ -287,13 +289,15 @@ class CSSEGISandData:
             location_struct["lng"] = lng
             location_struct["location"] = location
             location_struct["values"] = day_array
+            if location in self.global_population_dataset.keys():
+                location_struct["population_2020"] = "{}".format(self.global_population_dataset[location])
             locations.append(location_struct)
         # Now let's push stats for the day
         self.logger.debug("Daily series identified: %s", self.date_keys)
         for series in sorted(self.date_keys):
             day_stats = self.get_stats_for_day(gps_records, series)
             series_stats.append(day_stats)
-        self.logger.info("Finished calculations for JSON structure")
+        self.logger.info("DONE creating array structs for the JSON")
         res = dict()
         res["locations"] = locations
         res["series_stats"] = series_stats
@@ -309,6 +313,15 @@ class CSSEGISandData:
         """
         return {**lhs, **rhs}
 
+    def write_to_file(self, filename, content):
+        """
+        Writes some input content into an input filename
+        """
+        self.logger.info("INIT Writing %s", filename)
+        with open(filename, "w") as file_handle:
+            file_handle.write(content)
+        self.logger.info("DONE writing %s", filename)
+
     def process_confirmed(self):
         """
         Processes the global confirmed in-memory records
@@ -319,11 +332,8 @@ class CSSEGISandData:
             self.us_confirmed_dataset, USFileType=True)
         confirmed_gps_data = self.merge_gps_records(
             global_confirmed_gps_data, us_confirmed_gps_data)
-        logging.info("Writing data/confirmed.json")
-        with open("data/confirmed.json", "w") as file_handle:
-            file_handle.write(self.generate_globe_json_string(
-                confirmed_gps_data))
-        logging.info("Finished writing data/confirmed.json")
+        self.write_to_file("data/confirmed.json",
+                           self.generate_globe_json_string(confirmed_gps_data))
 
     def process_deaths(self):
         """
@@ -338,11 +348,8 @@ class CSSEGISandData:
             self.us_deaths_dataset, USFileType=True, offset_dates=12)
         deaths_gps_data = self.merge_gps_records(
             global_deaths_gps_data, us_deaths_gps_data)
-        logging.info("Writing data/deaths.json")
-        with open("data/deaths.json", "w") as file_handle:
-            file_handle.write(self.generate_globe_json_string(
-                deaths_gps_data))
-        logging.info("Finished writing data/deaths.json")
+        self.write_to_file("data/deaths.json",
+                           self.generate_globe_json_string(deaths_gps_data))
 
     def process_recovered(self):
         """
@@ -350,21 +357,18 @@ class CSSEGISandData:
         """
         global_recovered_gps_data = self.parse_csv_file_contents(
             self.global_recovered_dataset, USFileType=False, forceProcessUS=True)
-        #_date_keys, us_recovered_gps_data = parse_csv_file_contents("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_US.csv", USFileType=True)
+        # _date_keys, us_recovered_gps_data = parse_csv_file_contents("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_US.csv", USFileType=True)
         # There's no recovered dataset for US
         us_recovered_gps_data = dict()
         recovered_gps_data = self.merge_gps_records(
             global_recovered_gps_data, us_recovered_gps_data)
-        logging.info("Writing data/recovered.json")
-        with open("data/recovered.json", "w") as file_handle:
-            file_handle.write(self.generate_globe_json_string(
-                recovered_gps_data))
-        logging.info("Finished writing data/recovered.json")
+        self.write_to_file("data/recovered.json",
+                           self.generate_globe_json_string(recovered_gps_data))
 
     def load_world_population(self):
         """
         Loads the WorldOMeters data
         """
-        world_pop_handler = WorldOMeters(self.logger)
+        world_pop_handler = WorldOMeters()
         world_pop_handler.load_default_datasources()
         self.global_population_dataset = world_pop_handler.global_population_dataset

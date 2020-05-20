@@ -18,11 +18,11 @@ class WorldOMeters:
     Handles the population-by-country from worldometers.
     """
 
-    def __init__(self, logger):
+    def __init__(self):
         """
         Sets up initial variables on the source of the data
         """
-        self.logger = logger
+        self.logger = logging.getLogger("world_population")
         raw_https_base_url = "www.worldometers.info/world-population/"
         self.global_population_url = "https://{}/{}".format(
             raw_https_base_url,
