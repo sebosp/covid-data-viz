@@ -6,7 +6,8 @@
         [5,  5, 0], /*"<cumulative>", "<day_increment>", "<day_delta>",*/
         [15, 10, 5]
         [18, 3, -7]
-    ]
+    ],
+    "population_2020": "Some population number"
     }]
 },
 "series_stats": [{
