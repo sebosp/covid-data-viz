@@ -530,11 +530,13 @@ function centerGlobeToLocation(current_focused_location) {
     globe.target.y = window.data["locations"][current_focused_location]["y"];
 }
 
-function centerGlobeToFocusedLocation() {
+function updateFocusedRegionData() {
+    // Dataset structure (See data/data-schema.json)
     // {"locations": [{
     //     "lat": 10,
     //     "lng": 4.9,
     //     "location": "China - Hubei",
+    //     "population_2020": "<population",
     //     "values": [
     //         [ 0,  0,  0], <cumulative>, <day_increment>, <day_increment_delta>
     //         [ 25, 25, 25],
@@ -597,7 +599,9 @@ function centerGlobeToFocusedLocation() {
     }
     document.getElementById("focus-region").innerHTML = location_name + ' [' + formatted_stat_value + '] '
     updateCountryD3Graph();
-    centerGlobeToLocation(current_focused_location);
+    if (autofocus) {
+        centerGlobeToLocation(current_focused_location);
+    }
 }
 
 function loadGlobeDataForDay() {
@@ -652,7 +656,7 @@ function updateDisplays(day_index) {
         globe.resetData();
         loadGlobeDataForDay()
         globe.createPoints();
-        centerGlobeToFocusedLocation();
+        updateFocusedRegionData();
     }
 }
 
