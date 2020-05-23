@@ -37,7 +37,6 @@ if (!Detector.webgl) {
             "type": "top_cumulative",
             "series_stats_key": "cumulative_global",
             "legend": "Cases",
-            "icon": "present_to_all",
             "min_value_fn": function () {
                 return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[0]))
             },
@@ -73,7 +72,6 @@ if (!Detector.webgl) {
             "type": "top_day",
             "series_stats_key": "day_global",
             "legend": "Cases",
-            "icon": "today",
             "min_value_fn": function () {
                 return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[1]))
             },
@@ -121,7 +119,6 @@ if (!Detector.webgl) {
             "type": "top_delta",
             "series_stats_key": "delta_global",
             "legend": "Cases",
-            "icon": "change_history",
             // The trend can be negative, so we need to find the minimum value
             "min_value_fn": function () {
                 return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[2]))
@@ -536,7 +533,7 @@ function updateFocusedRegionData() {
     //     "lat": 10,
     //     "lng": 4.9,
     //     "location": "China - Hubei",
-    //     "population_2020": "<population",
+    //     "population_2020": "<population>",
     //     "values": [
     //         [ 0,  0,  0], <cumulative>, <day_increment>, <day_increment_delta>
     //         [ 25, 25, 25],
@@ -599,9 +596,7 @@ function updateFocusedRegionData() {
     }
     document.getElementById("focus-region").innerHTML = location_name + ' [' + formatted_stat_value + '] '
     updateCountryD3Graph();
-    if (autofocus) {
-        centerGlobeToLocation(current_focused_location);
-    }
+    centerGlobeToLocation(current_focused_location);
 }
 
 function loadGlobeDataForDay() {
