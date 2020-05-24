@@ -326,6 +326,7 @@ class CSSEGISandData:
         """
         Processes the global confirmed in-memory records
         """
+        self.logger = logging.getLogger("Confirmed")
         global_confirmed_gps_data = self.parse_csv_file_contents(
             self.global_confirmed_dataset, USFileType=False)
         us_confirmed_gps_data = self.parse_csv_file_contents(
@@ -339,6 +340,7 @@ class CSSEGISandData:
         """
         Processes the global confirmed in-memory records
         """
+        self.logger = logging.getLogger("Deaths")
         global_deaths_gps_data = self.parse_csv_file_contents(
             self.global_deaths_dataset, USFileType=False)
         # The header of the US file has the dates start at offset 12
@@ -355,6 +357,7 @@ class CSSEGISandData:
         """
         Processes the global confirmed in-memory records
         """
+        self.logger = logging.getLogger("Recovered")
         global_recovered_gps_data = self.parse_csv_file_contents(
             self.global_recovered_dataset, USFileType=False, forceProcessUS=True)
         # _date_keys, us_recovered_gps_data = parse_csv_file_contents("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_US.csv", USFileType=True)
