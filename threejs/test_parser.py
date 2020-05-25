@@ -62,7 +62,9 @@ class TestParsing(unittest.TestCase):
     def test_generate_globe_json(self):
         csse_handler = self.test_parse_header()
         test_data = self.test_parse_data()
-        self.maxDiff = 2048
+        self.maxDiff = 3000
+        # Just a silly number to easily test percents
+        csse_handler.global_population = 100
         globe_json = csse_handler.generate_globe_json_string(
             test_data, pretty_print=False)
         expected_json_string = """
@@ -93,7 +95,12 @@ class TestParsing(unittest.TestCase):
                   "value": 0,
                   "location_idx": 0
                 },
+                "top_cumulative_percent": {
+                  "value": 0,
+                  "location_idx": 0
+                },
                 "cumulative_global": 5,
+                "cumulative_global_percent": 5.0,
                 "day_global": 5,
                 "delta_global": 0
               },
@@ -111,7 +118,12 @@ class TestParsing(unittest.TestCase):
                   "value": 4,
                   "location_idx": 0
                 },
+                "top_cumulative_percent": {
+                  "value": 0,
+                  "location_idx": 0
+                },
                 "cumulative_global": 6,
+                "cumulative_global_percent": 6.0,
                 "day_global": 1,
                 "delta_global": -4
               }
