@@ -24,7 +24,12 @@
         "location_idx": 0,
         "value": 0
     },
+    "top_cumulative_percent": {
+        "value": 0,
+        "location_idx": 0
+    },
     "cumulative_global": 5,
+    "cumulative_global_percent": 0.000000000001,
     "day_global": 5,
     "delta_global": 0,
     "min_delta": 0
