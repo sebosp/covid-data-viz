@@ -41,6 +41,7 @@ class CSSEGISandData:
             base_url, "time_series_covid19_recovered_global.csv")
         self.date_keys = []
         self.global_population_dataset = dict()
+        self.global_population = 1
 
     def load_default_datasources(self):
         """
@@ -210,6 +211,9 @@ class CSSEGISandData:
         res["top_delta"] = dict()
         res["top_delta"]["value"] = 0
         res["top_delta"]["location_idx"] = 0
+        res["top_cumulative_percent"] = dict()
+        res["top_cumulative_percent"]["value"] = 0
+        res["top_cumulative_percent"]["location_idx"] = 0
         # For the most part, the stats have minimum value of 0, except for delta, which can be negative
         # So let's find the minimum value
         cumulative_global = 0
@@ -219,26 +223,33 @@ class CSSEGISandData:
         for lat_lng_key, lat_lng_data in gps_records.items():
             _lat, _lng, location, USFileType, forceProcessUS = lat_lng_key.split(
                 ",")
-            for day_key, day_data in lat_lng_data.items():
+            for day_key, region_day_data in lat_lng_data.items():
                 if day_key == series_key:
                     if USFileType == "False" and location == "US" and forceProcessUS == "False":
                         logging.debug("Ignoring stat for day: %s location: %s, USFileType: %s, forceProcessUS: %s",
                                       day_key, location, USFileType, forceProcessUS)
                     else:
-                        cumulative_global += day_data["cumulative"]
-                        day_global += day_data["day"]
-                        delta_global += day_data["delta"]
-                    if day_data["cumulative"] > res["top_cumulative"]["value"]:
-                        res["top_cumulative"]["value"] = day_data["cumulative"]
+                        cumulative_global += region_day_data["cumulative"]
+                        day_global += region_day_data["day"]
+                        delta_global += region_day_data["delta"]
+                    if location in self.global_population_dataset.keys():
+                        region_population = self.global_population_dataset[location]
+                        cumulative_percent = (region_day_data["cumulative"] / region_population) * 100
+                        if cumulative_percent > res["top_cumulative_percent"]["value"]:
+                            res["top_cumulative_percent"]["value"] = cumulative_percent
+                            res["top_cumulative_percent"]["location_idx"] = location_number
+                    if region_day_data["cumulative"] > res["top_cumulative"]["value"]:
+                        res["top_cumulative"]["value"] = region_day_data["cumulative"]
                         res["top_cumulative"]["location_idx"] = location_number
-                    if abs(day_data["day"]) > res["top_day"]["value"]:
-                        res["top_day"]["value"] = abs(day_data["day"])
+                    if abs(region_day_data["day"]) > res["top_day"]["value"]:
+                        res["top_day"]["value"] = abs(region_day_data["day"])
                         res["top_day"]["location_idx"] = location_number
-                    if abs(day_data["delta"]) > res["top_delta"]["value"]:
-                        res["top_delta"]["value"] = abs(day_data["delta"])
+                    if abs(region_day_data["delta"]) > res["top_delta"]["value"]:
+                        res["top_delta"]["value"] = abs(region_day_data["delta"])
                         res["top_delta"]["location_idx"] = location_number
             location_number += 1
         res["cumulative_global"] = cumulative_global
+        res["cumulative_global_percent"] = (cumulative_global / self.global_population) * 100
         res["day_global"] = day_global
         res["delta_global"] = delta_global
         return res
@@ -267,22 +278,22 @@ class CSSEGISandData:
                 continue
             day_array = []
             for day_key in sorted(lat_lng_data.keys()):
-                day_data = lat_lng_data[day_key]
+                region_day_data = lat_lng_data[day_key]
                 if USFileType == "False" and location == "US" and forceProcessUS == "False":
                     # The data for US in this filetype is aggregated, let's not draw it twice
                     # we will send a "hide" flag
                     day_array.append([
-                        day_data["cumulative"],
-                        day_data["day"],
-                        day_data["delta"],
+                        region_day_data["cumulative"],
+                        region_day_data["day"],
+                        region_day_data["delta"],
                         1,
                     ])
                 else:
                     # Let's rounde the day value by 3 floats to reduce json file size
                     day_array.append([
-                        day_data["cumulative"],
-                        day_data["day"],
-                        day_data["delta"],
+                        region_day_data["cumulative"],
+                        region_day_data["day"],
+                        region_day_data["delta"],
                     ])
             location_struct = dict()
             location_struct["lat"] = lat
@@ -290,7 +301,10 @@ class CSSEGISandData:
             location_struct["location"] = location
             location_struct["values"] = day_array
             if location in self.global_population_dataset.keys():
-                location_struct["population_2020"] = "{}".format(self.global_population_dataset[location])
+                location_struct["population_2020"] = int(self.global_population_dataset[location])
+            else:
+                # When the population is zero, we filter them out on the javascript side
+                location_struct["population_2020"] = 0
             locations.append(location_struct)
         # Now let's push stats for the day
         self.logger.debug("Daily series identified: %s", self.date_keys)
@@ -375,3 +389,7 @@ class CSSEGISandData:
         world_pop_handler = WorldOMeters()
         world_pop_handler.load_default_datasources()
         self.global_population_dataset = world_pop_handler.global_population_dataset
+        global_population = 0
+        for country in self.global_population_dataset.keys():
+            global_population += self.global_population_dataset[country]
+        self.global_population = global_population
