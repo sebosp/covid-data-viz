@@ -77,7 +77,8 @@ class TestParsing(unittest.TestCase):
                 "values": [
                   [ 5, 5, 0 ],
                   [ 6, 1, -4 ]
-                ]
+                ],
+                "population_2020": 0
               }
             ],
             "series_stats": [
