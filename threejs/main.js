@@ -25,7 +25,7 @@ if (!Detector.webgl) {
         // XXX: This is a bad idea, using a hardcoded array index, maybe change it to a map(){idx: x, is_cumulative: true} with filter
         top_cumulative_idx = 0;
         // Zero entries, let's see if the previous day had data:
-        if (stats_config[top_cumulative_idx]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index - 1]) > 0) {
+        if (stats_config[top_cumulative_idx]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index - 1], current_focused_location) > 0) {
             return true;
         }
         // If we reach this point, the previous day has no cumulative records and so the delta is meaningless
@@ -41,7 +41,7 @@ if (!Detector.webgl) {
                 return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[0]))
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_cumulative"]["value"]},
-            "data_fn": function (d) {return d[0]},
+            "data_fn": function (d, _loc) {return d[0]},
             "color_fn": function (value, _location_idx) {
                 switch (datasetType) {
                     case "deaths":
@@ -76,7 +76,7 @@ if (!Detector.webgl) {
                 return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[1]))
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_day"]["value"]},
-            "data_fn": function (d) {return d[1]},
+            "data_fn": function (d, _loc) {return d[1]},
             "color_fn": function (value, location_idx) {
                 switch (datasetType) {
                     case "deaths":
@@ -124,7 +124,7 @@ if (!Detector.webgl) {
                 return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(d => d[2]))
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_delta"]["value"]},
-            "data_fn": function (d) {return d[2]},
+            "data_fn": function (d, _loc) {return d[2]},
             "color_fn": function (value, location_idx) {
                 switch (datasetType) {
                     case "deaths":
@@ -159,6 +159,36 @@ if (!Detector.webgl) {
                         }
                     default: return null
                 }
+            },
+        },
+        {
+            "type": "top_cumulative_percent",
+            "series_stats_key": "cumulative_global_percent",
+            "legend": "% of population",
+            // The trend can be negative, so we need to find the minimum value
+            "min_value_fn": function () {
+                return Math.min(0, ...window.data["locations"][current_focused_location]["values"].map(
+                    function (d) {
+                        if (window.data["locations"][current_focused_location]["population_2020"] != "0") {
+                            return (d[0] / window.data["locations"][current_focused_location]["population_2020"]) * 100;
+                        } else {
+                            return 0;
+                        }
+                    }
+                ))
+            },
+            "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_cumulative_percent"]["value"]},
+            "data_fn": function (d, location_idx) {
+                if (window.data["locations"][location_idx]["population_2020"] != 0) {
+                    return (d[0] / window.data["locations"][location_idx]["population_2020"]) * 100
+                } else {
+                    return 0;
+                }
+            },
+            "color_fn": function (value, location_idx) {
+                // Re-use the same logic as the color_fn of top_cumulative
+                // TODO: Somehow stop using indexes.
+                return stats_config[0]["color_fn"](value, location_idx);
             },
         }
     ]
@@ -207,7 +237,7 @@ function findClosestRegion(target_lat, target_lng, threshold = 5) {
     countrieInThreshold = Array();
     matchingLocations = window.data["locations"].map(function (_loc, idx) {
         // The value might not be drawn, so let's skip over non-drawn regions
-        day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][idx]["values"][current_day_index])
+        day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][idx]["values"][current_day_index], idx)
         color = stats_config[current_stat_index]["color_fn"](day_value, idx)
         if (color == null) {
             return {"idx": idx, "matches": false}
@@ -415,7 +445,9 @@ function updateCountryD3Graph(force = false) {
                 {
                     name: window.data["locations"][current_focused_location]["location"],
                     values: window.data["locations"][current_focused_location]["values"].map(
-                        stats_config[current_stat_index]["data_fn"]
+                        function (d) {
+                            return stats_config[current_stat_index]["data_fn"](d, current_focused_location)
+                        }
                     ),
                 }
             ],
@@ -568,7 +600,7 @@ function updateFocusedRegionData() {
         current_focused_location = dayStats[stats_config[current_stat_index]["type"]]["location_idx"]
     }
     location_name = window.data["locations"][current_focused_location]["location"]
-    stat_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][current_focused_location]["values"][current_day_index])
+    stat_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][current_focused_location]["values"][current_day_index], current_focused_location)
     // Let's format the number to look like X,YYY
     stat_type = stats_config[current_stat_index]["type"]
     formatted_stat_value = d3.format(",")(stat_value)
@@ -600,10 +632,10 @@ function updateFocusedRegionData() {
 }
 
 function loadGlobeDataForDay() {
-    console.log("loadGlobeDataForDay" + current_day_index);
     var subgeo = new THREE.Geometry();
     // By default, let's show the color based on the dataset type
     focus_stat_max_value = stats_config[current_stat_index]["max_value_fn"]();
+    console.log("loadGlobeDataForDay: " + current_day_index + ", max value: " + focus_stat_max_value);
     for (location_idx = 0; location_idx < window.data["locations"].length; location_idx++) {
         // A 4th item in the values array could be for hiding a value (not drawing), to avoid counting several times
         if (window.data["locations"][location_idx]["values"][current_day_index].length > 3) {
@@ -611,8 +643,10 @@ function loadGlobeDataForDay() {
         }
         lat = window.data["locations"][location_idx]["lat"];
         lng = window.data["locations"][location_idx]["lng"];
-        dayStats = window.data["series_stats"][current_day_index];
-        day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index])
+        day_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][location_idx]["values"][current_day_index], location_idx)
+        if (location_idx < 10) {
+            console.log("day_value: " + day_value);
+        }
         color = stats_config[current_stat_index]["color_fn"](day_value, location_idx)
         if (color == null) {
             continue;
