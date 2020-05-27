@@ -42,6 +42,7 @@ if (!Detector.webgl) {
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_cumulative"]["value"]},
             "data_fn": function (d, _loc) {return d[0]},
+            "value_format_fn": d3.format(".2s"),
             "color_fn": function (value, _location_idx) {
                 switch (datasetType) {
                     case "deaths":
@@ -77,6 +78,7 @@ if (!Detector.webgl) {
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_day"]["value"]},
             "data_fn": function (d, _loc) {return d[1]},
+            "value_format_fn": d3.format(".2s"),
             "color_fn": function (value, location_idx) {
                 switch (datasetType) {
                     case "deaths":
@@ -125,6 +127,7 @@ if (!Detector.webgl) {
             },
             "max_value_fn": function () {return window.data["series_stats"][current_day_index]["top_delta"]["value"]},
             "data_fn": function (d, _loc) {return d[2]},
+            "value_format_fn": d3.format(".2s"),
             "color_fn": function (value, location_idx) {
                 switch (datasetType) {
                     case "deaths":
@@ -185,6 +188,7 @@ if (!Detector.webgl) {
                     return 0;
                 }
             },
+            "value_format_fn": d3.format(".7~f"),
             "color_fn": function (value, location_idx) {
                 // Re-use the same logic as the color_fn of top_cumulative
                 // TODO: Somehow stop using indexes.
@@ -472,7 +476,7 @@ function updateCountryD3Graph(force = false) {
             .call(d3.axisBottom(xScale).ticks(chartWidth / 80).tickSizeOuter(0))
         yAxis = g => g
             .attr("transform", `translate(${chartMargin.left},0)`)
-            .call(d3.axisLeft(yScale).tickFormat(d3.format(".2s")))
+            .call(d3.axisLeft(yScale).tickFormat(stats_config[current_stat_index]["value_format_fn"]))
             .call(g => g.select(".domain").remove())
             .call(g => g.select(".tick:last-of-type text").clone()
                 .attr("x", 3)
@@ -603,7 +607,7 @@ function updateFocusedRegionData() {
     stat_value = stats_config[current_stat_index]["data_fn"](window.data["locations"][current_focused_location]["values"][current_day_index], current_focused_location)
     // Let's format the number to look like X,YYY
     stat_type = stats_config[current_stat_index]["type"]
-    formatted_stat_value = d3.format(",")(stat_value)
+    formatted_stat_value = stats_config[current_stat_index]["value_format_fn"](stat_value)
     if (stat_type == "top_delta") {
         if (stat_value > 0) {
             icon = 'trending_up'
@@ -680,7 +684,7 @@ function updateDisplays(day_index) {
             current_focused_location = dayStats[stats_config[current_stat_index]["type"]]["location_idx"]
         }
         global_stat_legend = stats_config[current_stat_index]["legend"]
-        global_stat_value = d3.format(".2s")(dayStats[stats_config[current_stat_index]["series_stats_key"]])
+        global_stat_value = stats_config[current_stat_index]["value_format_fn"](dayStats[stats_config[current_stat_index]["series_stats_key"]])
         document.getElementById("current-stats").innerHTML = global_stat_value + ' ' + global_stat_legend
         globe.resetData();
         loadGlobeDataForDay()
