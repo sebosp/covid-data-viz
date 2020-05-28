@@ -1,14 +1,26 @@
 #!/usr/bin/env python
 import unittest
 import transform
+from CSSEGISandData import CSSEGISandDataHelper
 from CSSEGISandData import CSSEGISandData
 import json
 import logging
+import utils
 
 logger = logging.getLogger()
 logger.level = logging.ERROR
 
+
 class TestParsing(unittest.TestCase):
+
+    def setUp(self):
+        """
+        Let's setup some variables to avoid hardcoding
+        """
+        # Our test world has a country named "Country" with a population of 100
+        self.world_population = 100
+        self.world_population_dataset = dict()
+        self.world_population_dataset["Country"] = 100
 
     def test_parse_header(self):
         """
@@ -28,7 +40,7 @@ class TestParsing(unittest.TestCase):
         # In this test record, the latitude is "0" and the longitude is "80"
         data_array = "Province,Country,0,80,5,6".split(",")
         gps_key, parsed_daily_data = csse_handler.parse_data_line(data_array)
-        self.assertEqual(gps_key, "0,80,Country - Province,False,False")
+        self.assertEqual(gps_key, "0,80,Country - Province")
         first_day_record = parsed_daily_data.get("20-01-21")
         self.assertIsNotNone(first_day_record)
         self.assertEqual(first_day_record, {
@@ -45,12 +57,14 @@ class TestParsing(unittest.TestCase):
     def test_find_top_cumulative(self):
         csse_handler = self.test_parse_header()
         test_data = self.test_parse_data()
-        day_stats = csse_handler.get_stats_for_day(test_data, "20-01-22")
-        self.assertEqual(day_stats["top_cumulative"], {"value": 6, "location_idx": 0})
+        day_stats = csse_handler.get_stats_for_day(
+            test_data, "20-01-22", self.world_population_dataset, self.world_population)
+        self.assertEqual(day_stats["top_cumulative"], {
+                         "value": 6, "location_idx": 0})
 
     def test_scale_daily_values(self):
         test_data = self.test_parse_data()
-        gps_record = test_data.get("0,80,Country - Province,False,False")
+        gps_record = test_data.get("0,80,Country - Province")
         self.assertIsNotNone(gps_record)
         first_day_data = gps_record.get("20-01-21")
         self.assertEqual(first_day_data, {
@@ -63,10 +77,8 @@ class TestParsing(unittest.TestCase):
         csse_handler = self.test_parse_header()
         test_data = self.test_parse_data()
         self.maxDiff = 3000
-        # Just a silly number to easily test percents
-        csse_handler.global_population = 100
         globe_json = csse_handler.generate_globe_json_string(
-            test_data, pretty_print=False)
+            test_data, self.world_population_dataset, self.world_population, pretty_print=False)
         expected_json_string = """
           {
             "locations": [
@@ -131,7 +143,8 @@ class TestParsing(unittest.TestCase):
             ]
           }
         """
-        self.assertEqual(globe_json, json.dumps(json.loads(expected_json_string)))
+        self.assertEqual(globe_json, json.dumps(
+            json.loads(expected_json_string)))
 
     def test_merge_gps_records(self):
         csse_handler = self.test_parse_header()
@@ -141,15 +154,15 @@ class TestParsing(unittest.TestCase):
             second_data_array)
         rhs_data = dict()
         rhs_data[gps_key] = parsed_daily_data
-        merged_records = csse_handler.merge_gps_records(lhs_data, rhs_data)
-        first_data = merged_records.get("0,80,Country - Province,False,False")
+        merged_records = utils.merge_dict(lhs_data, rhs_data)
+        first_data = merged_records.get("0,80,Country - Province")
         self.assertIsNotNone(first_data)
         self.assertEqual(first_data, lhs_data.get(
-            "0,80,Country - Province,False,False"))
-        second_data = merged_records.get("10,5,Country - Province,False,False")
+            "0,80,Country - Province"))
+        second_data = merged_records.get("10,5,Country - Province")
         self.assertIsNotNone(second_data)
         self.assertEqual(second_data, rhs_data.get(
-            "10,5,Country - Province,False,False"))
+            "10,5,Country - Province"))
 
 
 if __name__ == '__main__':

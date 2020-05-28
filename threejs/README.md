@@ -27,6 +27,7 @@ day with icon `change_history`.
 - Doesn't work on iPhone
 
 ## In Progress
+- Keep track of all the read files dates in the headers, if they are different, we should bail.
 - The world population is per country and we hide US, so when we use the country population we cannot draw US
 
 ## Done

@@ -10,13 +10,13 @@ TODO:
 """
 
 import logging
-from CSSEGISandData import CSSEGISandData
+from CSSEGISandData import CSSEGISandDataHelper
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("main transform")
-    csse_handler = CSSEGISandData(logger)
+    csse_handler = CSSEGISandDataHelper(logger)
     csse_handler.load_default_datasources()
     csse_handler.process_confirmed()
     csse_handler.process_deaths()
