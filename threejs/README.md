@@ -1,7 +1,7 @@
 # ThreeJS representation of the covid data.
 
 The source of the data is the same as the parent directory:
-[covid-19 repository](https://github.com/CSSEGISandData/COVID-19]
+[covid-19 repository](https://github.com/CSSEGISandData/COVID-19)
 
 ## Data Processing
 
@@ -20,7 +20,6 @@ day with icon `change_history`.
 
 
 ## TODO
-- Add screenshots
 - Dropdown with icons for selection with labels.
 - When clicking on the dropdowns, down/up arrow activates it, which collides with the zoom of the globe
 - Add a country dropdown to jump manually and see stats
@@ -29,6 +28,7 @@ day with icon `change_history`.
 ## In Progress
 - Keep track of all the read files dates in the headers, if they are different, we should bail.
 - The world population is per country and we hide US, so when we use the country population we cannot draw US
+- Add screenshots
 
 ## Done
 - Include population per country
