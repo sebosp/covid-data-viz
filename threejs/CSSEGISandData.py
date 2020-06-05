@@ -10,6 +10,7 @@ import requests
 from io import StringIO
 from world_population import WorldOMeters
 import utils
+import sys
 
 # TODO: The file only uses time_series data sources, maybe we should make it
 # explicit in the functions, for later we may support more data source types
@@ -306,6 +307,7 @@ class CSSEGISandDataHelper:
             base_url, "time_series_covid19_recovered_global.csv")
         self.date_keys = []
         self.load_world_population()
+        self.date_keys = []
 
     def load_world_population(self):
         """
@@ -347,6 +349,22 @@ class CSSEGISandDataHelper:
         self.us_deaths_dataset = us_deaths_req.content
         self.logger.info("DONE load_default_datasources")
 
+    def date_keys_sanity_check(self, new_date_keys, do_exit=True):
+        """
+        Ensures date_keys colected from the headers are the same for consistency
+        """
+        logger = logging.getLogger("date_keys_sanity_check")
+        if self.date_keys and self.date_keys != new_date_keys:
+            logger.error("Dates do not match with previous data set: [%s], [%s]",
+                    ",".join(self.date_keys), ",".join(new_date_keys))
+            if do_exit:
+                sys.exit(1)
+            else:
+                return False
+        self.date_keys = new_date_keys
+        return True
+
+
     def process_confirmed(self):
         """
         Processes the global confirmed in-memory records
@@ -355,9 +373,11 @@ class CSSEGISandDataHelper:
         csse_handler_global = CSSEGISandData(logger, USFileType=False)
         global_confirmed_gps_data = csse_handler_global.parse_csv_file_contents(
             self.global_confirmed_dataset)
+        self.date_keys_sanity_check(csse_handler_global.date_keys)
         csse_handler_us = CSSEGISandData(logger, USFileType=True)
         us_confirmed_gps_data = csse_handler_us.parse_csv_file_contents(
             self.us_confirmed_dataset)
+        self.date_keys_sanity_check(csse_handler_us.date_keys)
         confirmed_gps_data = utils.merge_dict(
             global_confirmed_gps_data, us_confirmed_gps_data)
         utils.write_to_file("data/confirmed.json",
@@ -371,6 +391,7 @@ class CSSEGISandDataHelper:
         csse_handler_global = CSSEGISandData(logger, USFileType=False)
         global_deaths_gps_data = csse_handler_global.parse_csv_file_contents(
             self.global_deaths_dataset)
+        self.date_keys_sanity_check(csse_handler_global.date_keys)
         # The header of the US file has the dates start at offset 12
         # perhaps we should validate this never changes, or the data will
         # be out of sync
@@ -378,6 +399,7 @@ class CSSEGISandDataHelper:
             logger, USFileType=True, offset_dates=12)
         us_deaths_gps_data = csse_handler_us.parse_csv_file_contents(
             self.us_deaths_dataset)
+        self.date_keys_sanity_check(csse_handler_us.date_keys)
         deaths_gps_data = utils.merge_dict(
             global_deaths_gps_data, us_deaths_gps_data)
         utils.write_to_file("data/deaths.json",
@@ -391,6 +413,7 @@ class CSSEGISandDataHelper:
         csse_handler_global = CSSEGISandData(logger)
         global_recovered_gps_data = csse_handler_global.parse_csv_file_contents(
             self.global_recovered_dataset)
+        self.date_keys_sanity_check(csse_handler_global.date_keys)
         # _date_keys, us_recovered_gps_data = parse_csv_file_contents("../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_US.csv", USFileType=True)
         # There's no recovered dataset for US
         utils.write_to_file("data/recovered.json",

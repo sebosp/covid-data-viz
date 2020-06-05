@@ -165,5 +165,16 @@ class TestParsing(unittest.TestCase):
             "10,5,Country - Province"))
 
 
+    def test_date_key_sanity_check(self):
+        header_1 = "Province,Country,Lat,Long,1/21/20,1/22/20".split(",")
+        header_2 = "Province,Country,Lat,Long,1/25/20,1/26/20".split(",")
+        csse_helper = CSSEGISandDataHelper(logger)
+        csse_handler_1 = CSSEGISandData(logger)
+        self.assertTrue(csse_helper.date_keys_sanity_check(csse_handler_1.date_keys, do_exit=False))
+        csse_handler_1.parse_header(header_1)
+        csse_handler_2 = CSSEGISandData(logger)
+        csse_handler_2.parse_header(header_2)
+        self.assertFalse(csse_helper.date_keys_sanity_check(csse_handler_2.date_keys, do_exit=False))
+        
 if __name__ == '__main__':
     unittest.main()

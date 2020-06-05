@@ -26,7 +26,6 @@ day with icon `change_history`.
 - Doesn't work on iPhone
 
 ## In Progress
-- Keep track of all the read files dates in the headers, if they are different, we should bail.
 - The world population is per country and we hide US, so when we use the country population we cannot draw US
 - Add screenshots
 
@@ -37,3 +36,4 @@ day with icon `change_history`.
 - The graphs for delay can also contain negative values and so the graph should include the x axis at 0 marker.
 - The python created structs use "lon" instead of "lng" which is only going to lead to trouble. Rename.
 - The globe constantly rotates, so the received latitude could be more than 180 degrees or less than 180 degrees
+- Keep track of all the read files dates in the headers, if they are different, we should bail.
