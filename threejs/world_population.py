@@ -7,7 +7,6 @@ import logging
 import csv
 import json
 import requests
-from io import StringIO
 from bs4 import BeautifulSoup
 from pprint import pprint
 import pandas
